@@ -1,0 +1,99 @@
+{
+  "theme": "light",
+  "archetype": "1 - Organic & Earthy (Luxury Hospitality Variant)",
+  "emotional_tone": "Premium, trustworthy, inviting, architectural",
+  "colors": {
+    "background": "#FAFAF9",
+    "surface": "#FFFFFF",
+    "text_primary": "#1C1917",
+    "text_secondary": "#57534E",
+    "primary": "#1C1917",
+    "primary_foreground": "#FFFFFF",
+    "accent": "#9A3412",
+    "border": "#E7E5E4",
+    "status": {
+      "approved": { "bg": "#DCFCE7", "text": "#166534" },
+      "pending": { "bg": "#FEF9C3", "text": "#854D0E" },
+      "rejected": { "bg": "#FEE2E2", "text": "#991B1B" }
+    }
+  },
+  "typography": {
+    "heading_font": "Playfair Display",
+    "body_font": "Manrope",
+    "h1": "text-5xl sm:text-6xl tracking-tight leading-none font-medium",
+    "h2": "text-3xl sm:text-4xl tracking-tight leading-snug",
+    "h3": "text-xl sm:text-2xl",
+    "body": "text-base leading-relaxed",
+    "label": "text-xs tracking-[0.2em] uppercase font-bold"
+  },
+  "layout_and_spacing": {
+    "marketing": {
+      "container_padding": "px-6 md:px-12 lg:px-24",
+      "section_spacing": "py-24 md:py-32",
+      "grid": "grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12"
+    },
+    "dashboard": {
+      "container_padding": "p-6 md:p-8",
+      "grid": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6",
+      "card_style": "bg-white border border-stone-200 rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.02)]"
+    }
+  },
+  "components_strategy": {
+    "hero_slider": "Full width image slider with bg-black/40 gradient overlay. H1 text centered or bottom-left aligned. Smooth crossfade using framer-motion.",
+    "venue_cards": "Image container with overflow-hidden and hover:scale-105 transition duration-700. Content below image with crisp typography. Badges for capacity/price.",
+    "search_filter": "Glassmorphism sticky bar (backdrop-blur-xl bg-white/70 border border-white/40). Shadcn select inputs.",
+    "testimonials": "Bento grid layout. Asymmetrical text blocks with large quote marks.",
+    "vendor_dashboard": "Clean sidebar layout. Denser F-pattern data entry. 'Add Listing' as a multi-step form or long structured scroll. Status badges using distinct colors.",
+    "admin_dashboard": "KPI metrics on top row. Data tables with subtle borders. Clear red/green action buttons for approve/reject.",
+    "auth_forms": "Split screen layout. Left side architectural image, right side clean minimal form."
+  },
+  "motion": {
+    "page_transitions": "opacity 0 to 1, y 10 to 0 using framer-motion",
+    "hover_states": "subtle lift (-translate-y-1) and shadow increase on dashboard cards",
+    "scroll": "Use Lenis for smooth momentum scrolling on marketing pages"
+  },
+  "media": {
+    "hero_slider_images": [
+      {
+        "url": "https://images.unsplash.com/photo-1761110787206-2cc164e4913c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjV8MHwxfHNlYXJjaHw0fHxsdXh1cnklMjBldmVudCUyMHZlbnVlJTIwaW50ZXJpb3J8ZW58MHx8fHwxNzc1Nzk5ODQ3fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Elegant dining room - slider image 1"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1759519238029-689e99c6d19e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjV8MHwxfHNlYXJjaHwyfHxsdXh1cnklMjBldmVudCUyMHZlbnVlJTIwaW50ZXJpb3J8ZW58MHx8fHwxNzc1Nzk5ODQ3fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Grand ballroom - slider image 2"
+      }
+    ],
+    "venue_cards": [
+      {
+        "url": "https://images.unsplash.com/photo-1761085590866-e94c99818636?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjV8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBldmVudCUyMHZlbnVlJTIwaW50ZXJpb3J8ZW58MHx8fHwxNzc1Nzk5ODQ3fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Modern building interior"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1714601344981-75e003bc5d18?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjBnbGFzcyUyMGFyY2hpdGVjdHVyZSUyMGV4dGVyaW9yfGVufDB8fHx8MTc3NTc5OTg1OXww&ixlib=rb-4.1.0&q=85",
+        "description": "Glass architecture exterior"
+      }
+    ],
+    "testimonials": [
+      {
+        "url": "https://images.unsplash.com/photo-1758518727888-ffa196002e59?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MTJ8MHwxfHNlYXJjaHwzfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMHBlcnNvbiUyMHBvcnRyYWl0fGVufDB8fHx8MTc3NTc5OTg0N3ww&ixlib=rb-4.1.0&q=85",
+        "name": "Professional woman portrait"
+      },
+      {
+        "url": "https://images.pexels.com/photos/4687575/pexels-photo-4687575.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "name": "Businessman portrait"
+      }
+    ],
+    "auth_background": "https://images.unsplash.com/photo-1715156153744-d5fd2f1f66eb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBnbGFzcyUyMGFyY2hpdGVjdHVyZSUyMGV4dGVyaW9yfGVufDB8fHx8MTc3NTc5OTg1OXww&ixlib=rb-4.1.0&q=85"
+  },
+  "testing": {
+    "attribute": "data-testid",
+    "convention": "kebab-case role-based"
+  },
+  "instructions_to_main_agent": [
+    "Use pure HTML/Tailwind for marketing layout (landing page), avoiding rigid Shadcn layouts there.",
+    "Use Shadcn UI components for dashboards and complex forms, customizing border radii and colors to match the theme.",
+    "Implement Lucide React icons for all dashboard actions and UI markers.",
+    "Ensure the hero slider uses the provided media URLs, with a dark overlay to maintain text contrast (minimum 3:1 ratio).",
+    "Inject the custom font imports into the main CSS or index.html."
+  ]
+}
