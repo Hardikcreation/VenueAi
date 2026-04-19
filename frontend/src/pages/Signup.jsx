@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useToast } from '../context/ToastContext';
 import { authAPI } from '../services/api';
+import { getErrorMessage } from '../utils/errors';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -16,6 +18,7 @@ const Signup = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,10 +27,13 @@ const Signup = () => {
 
     try {
       await authAPI.signup(formData);
+      showToast('Account created successfully. You can log in now.', 'success');
       navigate('/login');
     } catch (err) {
       console.error('Signup error:', err);
-      setError(err.data?.message || err.message || 'Signup failed');
+      const message = getErrorMessage(err, 'Signup failed');
+      setError(message);
+      showToast(message, 'error');
     } finally {
       setLoading(false);
     }

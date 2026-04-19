@@ -1,62 +1,134 @@
-const { getPool } = require('../config/db');
-const { formatProduct } = require('../utils/productFormatter');
+const Product = require('../models/Product');
+const Feature = require('../models/Feature');
+const Service = require('../models/Service');
+const Package = require('../models/Package');
 
+const formatProductPayload = (product, extras = {}) => {
+  if (!product) return null;
+
+  const vendor = product.vendor_id || null;
+  const owner = vendor?.user_id || null;
+  const rawPrice = product.price ?? product.base_price ?? 0;
+
+  return {
+    ...product.toObject(),
+    ...extras,
+    id: String(product._id),
+    name: product.title,
+    title: product.title,
+    price: rawPrice,
+    base_price: rawPrice,
+    thumbnail: product.image || null,
+    image: product.image || null,
+    gallery_images: product.gallery_images || [],
+    business_name: vendor?.business_name || '',
+    vendor_name: owner?.name || '',
+    area: [product.zone, product.landmark].filter(Boolean).join(', '),
+  };
+};
+
+// ✅ Get All Products (with search + filter + pagination)
 const getAllProducts = async (req, res) => {
   try {
-    const { status, search } = req.query;
-    let query = `
-      SELECT p.*, v.business_name, u.name as vendor_name 
-      FROM products p 
-      JOIN vendors v ON p.vendor_id = v.id 
-      JOIN users u ON v.user_id = u.id
-    `;
-    const params = [];
-    const conditions = [];
+    const { status, search, page = 1, limit = 10 } = req.query;
 
-    if (status) {
-      conditions.push('p.status = ?');
-      params.push(status);
-    }
+    let filter = {};
 
+    // 🔹 Only approved for public
+    if (status && status !== 'all') filter.status = status;
+    else filter.status = 'approved';
+
+    // 🔍 Search
     if (search) {
-      conditions.push('(p.title LIKE ? OR p.description LIKE ? OR p.category LIKE ? OR p.location LIKE ? OR p.occasion_types LIKE ? OR p.zone LIKE ? OR p.landmark LIKE ?)');
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+      filter.$text = { $search: search };
     }
 
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
-    }
+    const skip = (page - 1) * limit;
 
-    query += ' ORDER BY p.created_at DESC';
+    const products = await Product.find(filter)
+      .populate({
+        path: 'vendor_id',
+        select: 'business_name',
+        populate: {
+          path: 'user_id',
+          select: 'name'
+        }
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
 
-    const [products] = await getPool().query(query, params);
-    res.json(products.map(formatProduct));
+    // 🔥 Enrich data
+    const enriched = await Promise.all(
+      products.map(async (product) => {
+        const [features, services, packages] = await Promise.all([
+          Feature.findOne({ product_id: product._id }),
+          Service.find({ product_id: product._id }),
+          Package.find({ product_id: product._id })
+        ]);
+
+        return formatProductPayload(product, {
+          features,
+          services,
+          packages
+        });
+      })
+    );
+
+    const total = await Product.countDocuments(filter);
+
+    res.json({
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / limit),
+      data: enriched
+    });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
+
+// ✅ Get Single Product (Full Details)
 const getProductById = async (req, res) => {
   try {
-    const [products] = await getPool().query(
-      `SELECT p.*, v.business_name, u.name as vendor_name 
-       FROM products p 
-       JOIN vendors v ON p.vendor_id = v.id 
-       JOIN users u ON v.user_id = u.id 
-       WHERE p.id = ?`,
-      [req.params.id]
-    );
+    const product = await Product.findById(req.params.id)
+      .populate({
+        path: 'vendor_id',
+        select: 'business_name',
+        populate: {
+          path: 'user_id',
+          select: 'name'
+        }
+      });
 
-    if (products.length === 0) {
+    if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    res.json(formatProduct(products[0]));
+    const [features, services, packages] = await Promise.all([
+      Feature.findOne({ product_id: product._id }),
+      Service.find({ product_id: product._id }),
+      Package.find({ product_id: product._id })
+    ]);
+
+    res.json(formatProductPayload(product, {
+      features,
+      services,
+      packages
+    }));
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-module.exports = { getAllProducts, getProductById };
+
+module.exports = {
+  getAllProducts,
+  getProductById,
+  formatProductPayload
+};

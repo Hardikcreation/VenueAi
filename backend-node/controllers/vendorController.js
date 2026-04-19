@@ -1,242 +1,284 @@
-const { getPool } = require('../config/db');
-const { formatProduct, parseList, serializeList } = require('../utils/productFormatter');
+// controllers/vendorController.js
+
+const Vendor = require('../models/Vendor');
+const Product = require('../models/Product');
+const Booking = require('../models/Booking');
+
 const { uploadImage, uploadImages } = require('../utils/uploadImage');
 
+
+// ✅ Get Vendor by User
 const getVendorByUserId = async (userId) => {
-  const [vendors] = await getPool().query('SELECT * FROM vendors WHERE user_id = ?', [userId]);
-  return vendors[0] || null;
+  return await Vendor.findOne({ user_id: userId });
 };
 
+// ✅ Get Venue by Vendor
 const getVenueByVendorId = async (vendorId) => {
-  const [venues] = await getPool().query(
-    `SELECT p.*,
-      (
-        SELECT COUNT(*)
-        FROM bookings b
-        WHERE b.product_id = p.id AND b.status = 'pending'
-      ) AS pending_bookings,
-      (
-        SELECT COUNT(*)
-        FROM bookings b
-        WHERE b.product_id = p.id
-      ) AS total_bookings
-     FROM products p
-     WHERE p.vendor_id = ?
-     ORDER BY p.created_at ASC
-     LIMIT 1`,
-    [vendorId]
-  );
+  const product = await Product.findOne({ vendor_id: vendorId });
 
-  return venues[0] ? formatProduct(venues[0]) : null;
+  if (!product) return null;
+
+  const pendingBookings = await Booking.countDocuments({
+    product_id: product._id,
+    status: 'pending'
+  });
+
+  const totalBookings = await Booking.countDocuments({
+    product_id: product._id
+  });
+
+  return {
+    ...product.toObject(),
+    pending_bookings: pendingBookings,
+    total_bookings: totalBookings
+  };
 };
 
+
+// ✅ Get Profile
 const getProfile = async (req, res) => {
   try {
     const vendor = await getVendorByUserId(req.user.id);
 
     if (!vendor) {
-      return res.status(404).json({ message: 'Vendor profile not found' });
+      return res.status(404).json({ message: 'Vendor not found' });
     }
 
-    return res.json(vendor);
+    const venue = await Product.findOne({ vendor_id: vendor._id }).select('status title');
+
+    res.json({
+      ...vendor.toObject(),
+      venue_status: venue?.status || null,
+      venue_title: venue?.title || null
+    });
+
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
+
+// ✅ Update Profile
 const updateProfile = async (req, res) => {
   try {
     const vendor = await getVendorByUserId(req.user.id);
 
     if (!vendor) {
-      return res.status(404).json({ message: 'Vendor profile not found' });
+      return res.status(404).json({ message: 'Vendor not found' });
     }
 
-    const businessName = req.body.businessName?.trim() || vendor.business_name;
-    const phone = req.body.phone?.trim() || null;
-    const address = req.body.address?.trim() || null;
+    vendor.business_name = req.body.businessName?.trim() || vendor.business_name;
+    vendor.phone = req.body.phone?.trim() || null;
+    vendor.address = req.body.address?.trim() || null;
 
-    await getPool().query(
-      'UPDATE vendors SET business_name = ?, phone = ?, address = ? WHERE id = ?',
-      [businessName, phone, address, vendor.id]
-    );
+    await vendor.save();
 
-    return res.json({
-      message: 'Vendor profile updated successfully',
-      vendor: {
-        ...vendor,
-        business_name: businessName,
-        phone,
-        address
-      }
+    res.json({
+      message: 'Profile updated',
+      vendor
     });
+
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
+
+// ✅ Add Product (Venue)
 const addProduct = async (req, res) => {
   try {
-    const {
-      title,
-      description,
-      capacity,
-      price,
-      category,
-      location,
-      zone,
-      landmark,
-      latitude,
-      longitude,
-      streetViewImage,
-      videoUrl,
-      occasionTypes,
-      features
-    } = req.body;
-    const coverImage = await uploadImage(req.files?.image?.[0], 'venue-ai/cover-images');
+    const vendor = await getVendorByUserId(req.user.id);
+    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+
+    const existing = await Product.findOne({ vendor_id: vendor._id });
+    if (existing) {
+      return res.status(400).json({ message: 'Only one venue allowed per vendor' });
+    }
+
+    const coverImage = await uploadImage(req.files?.image?.[0], 'venue-ai/cover');
     const galleryImages = await uploadImages(req.files?.gallery || [], 'venue-ai/gallery');
 
-    const vendor = await getVendorByUserId(req.user.id);
-    if (!vendor) {
-      return res.status(404).json({ message: 'Vendor profile not found' });
-    }
+    const product = await Product.create({
+      vendor_id: vendor._id,
+      title: req.body.title,
+      description: req.body.description,
+      image: coverImage,
+      gallery_images: galleryImages,
+      video_url: req.body.videoUrl || null,
+      location: req.body.location,
+      category: req.body.category,
+      zone: req.body.zone,
+      landmark: req.body.landmark,
+      latitude: req.body.latitude,
+      longitude: req.body.longitude,
+      street_view_image: req.body.streetViewImage,
+      occasion_types: req.body.occasionTypes || [],
+      features: req.body.features || [],
+      capacity: req.body.capacity,
+      price: req.body.price,
+      base_price: req.body.price,
+      status: 'pending'
+    });
 
-    const existingVenue = await getVenueByVendorId(vendor.id);
-    if (existingVenue) {
-      return res.status(400).json({ message: 'Each vendor can manage only one venue. Please edit your existing venue instead.' });
-    }
+    res.status(201).json({
+      message: 'Venue added (pending approval)',
+      product
+    });
 
-    if (!title || !description) {
-      return res.status(400).json({ message: 'Title and description are required' });
-    }
-
-    await getPool().query(
-      `INSERT INTO products (
-        vendor_id, title, image, gallery_images, video_url, description, location, category,
-        zone, landmark, latitude, longitude, street_view_image, occasion_types, features, capacity, price, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        vendor.id,
-        title,
-        coverImage,
-        serializeList(galleryImages),
-        videoUrl || null,
-        description,
-        location || null,
-        category || null,
-        zone || null,
-        landmark || null,
-        latitude || null,
-        longitude || null,
-        streetViewImage || null,
-        serializeList(parseList(occasionTypes)),
-        serializeList(parseList(features)),
-        capacity || null,
-        price || null,
-        'pending'
-      ]
-    );
-
-    return res.status(201).json({ message: 'Product added successfully, pending approval' });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
+
+// ✅ Get My Venue
 const getMyVenue = async (req, res) => {
   try {
     const vendor = await getVendorByUserId(req.user.id);
-    if (!vendor) {
-      return res.status(404).json({ message: 'Vendor profile not found' });
-    }
+    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
 
-    const venue = await getVenueByVendorId(vendor.id);
-    return res.json(venue);
+    const venue = await getVenueByVendorId(vendor._id);
+
+    res.json(venue);
+
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
+
+// ✅ Update Venue
 const updateMyVenue = async (req, res) => {
   try {
     const vendor = await getVendorByUserId(req.user.id);
-    if (!vendor) {
-      return res.status(404).json({ message: 'Vendor profile not found' });
+    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+
+    const product = await Product.findOne({ vendor_id: vendor._id });
+    if (!product) return res.status(404).json({ message: 'Venue not found' });
+
+    if (req.files?.image?.[0]) {
+      product.image = await uploadImage(req.files.image[0], 'venue-ai/cover');
     }
 
-    const existingVenue = await getVenueByVendorId(vendor.id);
-    if (!existingVenue) {
-      return res.status(404).json({ message: 'No venue found for this vendor' });
+    const galleryImages = await uploadImages(req.files?.gallery || [], 'venue-ai/gallery');
+    if (galleryImages.length > 0) {
+      product.gallery_images = galleryImages;
     }
 
-    const {
-      title,
-      description,
-      capacity,
-      price,
-      category,
-      location,
-      zone,
-      landmark,
-      latitude,
-      longitude,
-      streetViewImage,
-      videoUrl,
-      occasionTypes,
-      features
-    } = req.body;
+    product.title = req.body.title || product.title;
+    product.description = req.body.description || product.description;
+    product.location = req.body.location || product.location;
+    product.category = req.body.category || product.category;
+    product.zone = req.body.zone || product.zone;
+    product.landmark = req.body.landmark || product.landmark;
+    product.capacity = req.body.capacity || product.capacity;
+    product.price = req.body.price || product.price;
+    product.base_price = req.body.price || product.base_price;
+    product.occasion_types = req.body.occasionTypes || product.occasion_types;
+    product.features = req.body.features || product.features;
 
-    const coverImage = req.files?.image?.[0]
-      ? await uploadImage(req.files.image[0], 'venue-ai/cover-images')
-      : existingVenue.image;
+    product.status = 'pending'; // re-approval
 
-    const uploadedGalleryImages = await uploadImages(req.files?.gallery || [], 'venue-ai/gallery');
-    const galleryImages = uploadedGalleryImages.length > 0
-      ? uploadedGalleryImages
-      : existingVenue.gallery_images;
+    await product.save();
 
-    await getPool().query(
-      `UPDATE products
-       SET title = ?, image = ?, gallery_images = ?, video_url = ?, description = ?,
-           location = ?, category = ?, zone = ?, landmark = ?, latitude = ?, longitude = ?,
-           street_view_image = ?, occasion_types = ?, features = ?, capacity = ?, price = ?, status = 'pending'
-       WHERE id = ? AND vendor_id = ?`,
-      [
-        title?.trim() || existingVenue.title,
-        coverImage,
-        serializeList(galleryImages),
-        videoUrl?.trim() || existingVenue.video_url || null,
-        description?.trim() || existingVenue.description,
-        location?.trim() || existingVenue.location || null,
-        category?.trim() || existingVenue.category || null,
-        zone?.trim() || existingVenue.zone || null,
-        landmark?.trim() || existingVenue.landmark || null,
-        latitude || existingVenue.latitude || null,
-        longitude || existingVenue.longitude || null,
-        streetViewImage?.trim() || existingVenue.street_view_image || null,
-        serializeList(parseList(occasionTypes ?? existingVenue.occasion_types)),
-        serializeList(parseList(features ?? existingVenue.features)),
-        capacity || existingVenue.capacity || null,
-        price || existingVenue.price || null,
-        existingVenue.id,
-        vendor.id
-      ]
-    );
-
-    const updatedVenue = await getVenueByVendorId(vendor.id);
-
-    return res.json({
-      message: 'Venue updated successfully. It is pending admin approval after the changes.',
-      venue: updatedVenue
+    res.json({
+      message: 'Updated (pending approval)',
+      product
     });
+
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-module.exports = { addProduct, getMyVenue, updateMyVenue, getProfile, updateProfile };
+
+// ✅ Upload Images
+const uploadVenueImages = async (req, res) => {
+  try {
+    const vendor = await getVendorByUserId(req.user.id);
+    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+
+    const product = await Product.findOne({ vendor_id: vendor._id });
+    if (!product) return res.status(404).json({ message: 'Venue not found' });
+
+    const uploadedImages = await uploadImages(req.files || [], 'venue-ai/gallery');
+    
+    // Add to existing gallery images
+    product.gallery_images = [...(product.gallery_images || []), ...uploadedImages];
+    await product.save();
+
+    res.json({
+      message: 'Images uploaded successfully',
+      images: uploadedImages,
+      gallery: product.gallery_images
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ✅ Get Venue Images
+const getVenueImages = async (req, res) => {
+  try {
+    const vendor = await getVendorByUserId(req.user.id);
+    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+
+    const product = await Product.findOne({ vendor_id: vendor._id });
+    if (!product) return res.status(404).json({ message: 'Venue not found' });
+
+    res.json(product.gallery_images || []);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ✅ Upload Verification Document
+const uploadVerificationDocument = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const vendor = await getVendorByUserId(req.user.id);
+    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+
+    // Upload document to Cloudinary
+    const documentUrl = await uploadImage(req.file, 'venue-ai/verification');
+
+    // Store verification document URL in vendor record
+    vendor.verification_documents = vendor.verification_documents || [];
+    vendor.verification_documents.push({
+      url: documentUrl,
+      uploadedAt: new Date()
+    });
+
+    await vendor.save();
+
+    res.json({
+      message: 'Document uploaded successfully',
+      documentUrl
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
+module.exports = {
+  addProduct,
+  getMyVenue,
+  updateMyVenue,
+  getProfile,
+  updateProfile,
+  uploadVenueImages,
+  getVenueImages,
+  uploadVerificationDocument
+};

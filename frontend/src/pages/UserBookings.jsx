@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { bookingAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
+import { getErrorMessage } from '../utils/errors';
 
 const statusStyles = {
   pending: 'bg-[#FEF9C3] text-[#854D0E]',
@@ -11,14 +13,20 @@ const statusStyles = {
 const UserBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const { showToast } = useToast();
 
   useEffect(() => {
     const loadBookings = async () => {
       try {
         const response = await bookingAPI.getMyBookings();
         setBookings(Array.isArray(response) ? response : []);
+        setError('');
       } catch (error) {
         console.error('Error fetching user bookings:', error);
+        const message = getErrorMessage(error, 'Unable to load your bookings right now.');
+        setError(message);
+        showToast(message, 'error');
       } finally {
         setLoading(false);
       }
@@ -41,6 +49,11 @@ const UserBookings = () => {
       </div>
 
       <div className="px-6 md:px-12 lg:px-24 py-10">
+        {error && (
+          <div className="bg-[#FEE2E2] text-[#991B1B] border border-[#FCA5A5] rounded-2xl p-4 mb-6">
+            {error}
+          </div>
+        )}
         {bookings.length === 0 ? (
           <div className="bg-white rounded-2xl border border-stone-200 p-8 text-center text-[#57534E]">
             You have not sent any booking requests yet.

@@ -1,13 +1,14 @@
+// controllers/authController.js
+
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { getPool } = require('../config/db');
+
+const User = require('../models/User');
+const Vendor = require('../models/Vendor');
 
 const normalizeRole = (role) => (role === 'vendor' ? 'vendor' : 'user');
 
 const signup = async (req, res) => {
-  const db = getPool();
-  let connection;
-
   try {
     const { name, email, password, role, businessName, phone, address } = req.body;
 
@@ -19,67 +20,48 @@ const signup = async (req, res) => {
     const normalizedRole = normalizeRole(role);
 
     if (normalizedRole === 'vendor' && !businessName?.trim()) {
-      return res.status(400).json({ message: 'Business name is required for vendor signup' });
+      return res.status(400).json({ message: 'Business name is required' });
     }
 
-    const [existingUser] = await db.query('SELECT id FROM users WHERE email = ?', [normalizedEmail]);
-    if (existingUser.length > 0) {
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
       return res.status(400).json({ message: 'Email already exists' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    connection = await db.getConnection();
-    await connection.beginTransaction();
-
-    const [userResult] = await connection.query(
-      'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-      [name.trim(), normalizedEmail, hashedPassword, normalizedRole]
-    );
+    const user = await User.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      password: hashedPassword,
+      role: normalizedRole
+    });
 
     let vendor = null;
-    if (normalizedRole === 'vendor') {
-      const [vendorResult] = await connection.query(
-        'INSERT INTO vendors (user_id, business_name, phone, address) VALUES (?, ?, ?, ?)',
-        [
-          userResult.insertId,
-          businessName.trim(),
-          phone?.trim() || null,
-          address?.trim() || null
-        ]
-      );
 
-      vendor = {
-        id: vendorResult.insertId,
+    if (normalizedRole === 'vendor') {
+      vendor = await Vendor.create({
+        user_id: user._id,
         business_name: businessName.trim(),
         phone: phone?.trim() || null,
         address: address?.trim() || null
-      };
+      });
     }
 
-    await connection.commit();
-
-    return res.status(201).json({
+    res.status(201).json({
       message: `${normalizedRole === 'vendor' ? 'Vendor' : 'User'} registered successfully`,
       user: {
-        id: userResult.insertId,
-        name: name.trim(),
-        email: normalizedEmail,
-        role: normalizedRole,
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
         vendor
       }
     });
-  } catch (error) {
-    if (connection) {
-      await connection.rollback();
-    }
 
+  } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Server error' });
-  } finally {
-    if (connection) {
-      connection.release();
-    }
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -92,45 +74,43 @@ const login = async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const [users] = await getPool().query('SELECT * FROM users WHERE email = ?', [normalizedEmail]);
-    if (users.length === 0) {
+
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const user = users[0];
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
-    const responseUser = {
-      id: user.id,
+    let responseUser = {
+      id: user._id,
       name: user.name,
       email: user.email,
       role: user.role
     };
 
     if (user.role === 'vendor') {
-      const [vendors] = await getPool().query(
-        'SELECT id, business_name, phone, address, created_at FROM vendors WHERE user_id = ?',
-        [user.id]
-      );
-      responseUser.vendor = vendors[0] || null;
+      const vendor = await Vendor.findOne({ user_id: user._id });
+      responseUser.vendor = vendor;
     }
 
-    return res.json({
+    res.json({
       token,
       user: responseUser
     });
+
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 

@@ -1,551 +1,509 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, CheckCircle2, Clock3, CreditCard, IndianRupee, MapPin, Sparkles, Video } from 'lucide-react';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { CalendarDays, CheckCircle2, Clock3, ImageIcon, IndianRupee, MapPin, Users } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { BACKEND_BASE_URL } from '../config/env';
+import { useToast } from '../context/ToastContext';
 import { bookingAPI, productAPI } from '../services/api';
+import { getErrorMessage } from '../utils/errors';
+import { getVenueImage, getVenueLocationLabel, toVenueImageUrl } from '../utils/venues';
 
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1761085590866-e94c99818636?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjV8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBldmVudCUyMHZlbnVlJTIwaW50ZXJpb3J8ZW58MHx8fHwxNzc1Nzk5ODQ3fDA&ixlib=rb-4.1.0&q=85';
 const TIME_SLOTS = ['10:00:00', '13:00:00', '16:00:00', '19:00:00'];
+const OCCASIONS = ['Wedding', 'Reception', 'Birthday', 'Corporate Event', 'Engagement', 'Other'];
 
-const normalizeImage = (image) => {
-  if (!image) {
-    return FALLBACK_IMAGE;
-  }
+const toCurrency = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+const today = new Date().toISOString().split('T')[0];
 
-  return image.startsWith('http') ? image : `${BACKEND_BASE_URL}${image}`;
-};
-
-const formatSlotLabel = (slot) => {
-  const [hours, minutes] = slot.split(':');
-  const date = new Date();
-  date.setHours(Number(hours), Number(minutes), 0, 0);
-  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+const formatDate = (value) => {
+  if (!value) return 'Not selected';
+  return new Date(value).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 };
 
 const VenueDetails = () => {
   const { id } = useParams();
-  const location = useLocation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useContext(AuthContext);
+  const { showToast } = useToast();
+  const bookingSectionRef = useRef(null);
+
   const [venue, setVenue] = useState(null);
   const [availability, setAvailability] = useState([]);
-  const [step, setStep] = useState('details');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState('');
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
+
   const [bookingForm, setBookingForm] = useState({
-    bookingName: user?.name || '',
-    bookingEmail: user?.email || '',
-    bookingPhone: '',
-    eventDate: '',
-    eventTime: '',
-    guestCount: '',
-    occasionType: '',
-    selectedServices: [],
-    paymentMethod: 'on_visit',
-    message: ''
+    booking_name: user?.name || '',
+    booking_email: user?.email || '',
+    booking_phone: '',
+    event_date: '',
+    event_time: '',
+    guest_count: '',
+    occasion_type: 'Wedding',
+    payment_method: 'on_visit',
+    message: '',
   });
 
   useEffect(() => {
-    if (user?.role === 'user') {
-      setBookingForm((current) => ({
-        ...current,
-        bookingName: current.bookingName || user.name || '',
-        bookingEmail: current.bookingEmail || user.email || ''
-      }));
-    }
+    setBookingForm((current) => ({
+      ...current,
+      booking_name: user?.name || current.booking_name,
+      booking_email: user?.email || current.booking_email,
+    }));
   }, [user]);
 
   useEffect(() => {
-    const loadVenue = async () => {
+    const fetchVenueDetails = async () => {
       try {
-        const [venueResponse, availabilityResponse] = await Promise.all([
+        setLoading(true);
+        const [venueData, availabilityData] = await Promise.all([
           productAPI.getById(id),
-          bookingAPI.getAvailability(id)
+          bookingAPI.getAvailability(id),
         ]);
 
-        setVenue(venueResponse);
-        setAvailability(Array.isArray(availabilityResponse.blockedSlots) ? availabilityResponse.blockedSlots : []);
-      } catch (error) {
-        console.error('Error loading venue details:', error);
-        setMessage(error.data?.message || error.message || 'Could not load venue details');
+        setVenue(venueData);
+        setAvailability(Array.isArray(availabilityData?.blockedSlots) ? availabilityData.blockedSlots : []);
+      } catch (err) {
+        console.error(err);
+        const message = getErrorMessage(err, 'Failed to load venue');
+        setError(message);
+        showToast(message, 'error');
       } finally {
         setLoading(false);
       }
     };
 
-    loadVenue();
+    if (id) fetchVenueDetails();
   }, [id]);
 
   useEffect(() => {
-    if (location.state?.startBooking) {
-      if (!user) {
-        navigate('/login');
-        return;
-      }
-
-      if (user.role !== 'user') {
-        setMessage('Only user accounts can place booking requests.');
-        return;
-      }
-
-      setStep('availability');
-    }
-  }, [location.state, navigate, user]);
-
-  useEffect(() => {
-    if (location.state?.prefillBooking) {
-      setBookingForm((current) => ({
-        ...current,
-        eventDate: location.state.prefillBooking.eventDate || current.eventDate,
-        guestCount: location.state.prefillBooking.guestCount || current.guestCount
-      }));
+    if (location.state?.startBooking && bookingSectionRef.current) {
+      bookingSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [location.state]);
 
-  const blockedForSelectedDate = useMemo(
-    () => availability.filter((slot) => slot.event_date?.slice(0, 10) === bookingForm.eventDate),
-    [availability, bookingForm.eventDate]
-  );
-
-  const unavailableTimes = new Set(blockedForSelectedDate.map((slot) => slot.event_time));
   const galleryImages = useMemo(() => {
-    if (!venue) {
-      return [];
-    }
+    if (!venue) return [];
+    const images = [venue.thumbnail, venue.image, ...(venue.gallery_images || [])]
+      .filter(Boolean)
+      .map((path) => toVenueImageUrl(path));
 
-    const gallery = Array.isArray(venue.gallery_images) ? venue.gallery_images.map(normalizeImage) : [];
-    const cover = normalizeImage(venue.image);
-    return [cover, ...gallery.filter((image) => image !== cover)];
+    return [...new Set(images)];
   }, [venue]);
 
-  const serviceOptions = Array.isArray(venue?.features) ? venue.features : [];
+  const blockedTimesForSelectedDate = useMemo(() => {
+    if (!bookingForm.event_date) return [];
 
-  const toggleService = (service) => {
+    return availability
+      .filter((slot) => slot.event_date?.slice(0, 10) === bookingForm.event_date)
+      .map((slot) => slot.event_time)
+      .filter(Boolean);
+  }, [availability, bookingForm.event_date]);
+
+  const isDateFullyBooked = useMemo(
+    () => blockedTimesForSelectedDate.length >= TIME_SLOTS.length,
+    [blockedTimesForSelectedDate]
+  );
+
+  const bookingHighlights = useMemo(() => {
+    if (!venue) return [];
+
+    return [
+      `${toCurrency(venue.price)} starting price`,
+      `Up to ${venue.capacity || 0} guests`,
+      venue.category || 'Venue booking',
+      getVenueLocationLabel(venue) || 'Bhopal',
+    ];
+  }, [venue]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
     setBookingForm((current) => ({
       ...current,
-      selectedServices: current.selectedServices.includes(service)
-        ? current.selectedServices.filter((item) => item !== service)
-        : [...current.selectedServices, service]
+      [name]: value,
+      ...(name === 'event_date' ? { event_time: '' } : {}),
     }));
+    setSuccessMessage('');
   };
 
-  const moveToBooking = () => {
+  const handleBooking = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage('');
+
     if (!user) {
-      navigate('/login');
+      navigate('/login', { state: { from: location.pathname } });
+      showToast('Please log in as a user to send a booking request.', 'info');
       return;
     }
 
     if (user.role !== 'user') {
-      setMessage('Only user accounts can send booking requests.');
+      const message = 'Only users can place booking requests.';
+      setError(message);
+      showToast(message, 'error');
       return;
     }
 
-    setMessage('');
-    setStep('availability');
-  };
-
-  const continueToPayment = () => {
-    if (!bookingForm.eventDate || !bookingForm.eventTime) {
-      setMessage('Please select an available date and time first.');
+    if (!bookingForm.event_date) {
+      setError('Please choose an event date.');
       return;
     }
 
-    setMessage('');
-    setStep('payment');
-  };
-
-  const submitBooking = async () => {
-    if (!venue) {
+    if (!bookingForm.event_time) {
+      setError('Please choose an available time slot.');
       return;
     }
-
-    setSubmitting(true);
-    setMessage('');
 
     try {
+      setSubmitting(true);
       const response = await bookingAPI.create({
-        productId: venue.id,
-        ...bookingForm
+        product_id: id,
+        ...bookingForm,
+        guest_count: Number(bookingForm.guest_count || 0),
       });
 
-      setMessage(response.message || 'After the vendor accepts your request within 24 hours, your booking will be confirmed.');
-      setStep('success');
-    } catch (error) {
-      setMessage(error.data?.message || error.message || 'Could not complete booking request');
+      const success = response?.message || 'Booking request sent successfully.';
+      setSuccessMessage(success);
+      showToast(success, 'success');
+      const updatedAvailability = await bookingAPI.getAvailability(id);
+      setAvailability(Array.isArray(updatedAvailability?.blockedSlots) ? updatedAvailability.blockedSlots : []);
+      setBookingForm((current) => ({
+        ...current,
+        event_time: '',
+        message: '',
+      }));
+    } catch (err) {
+      console.error(err);
+      const message = getErrorMessage(err, 'Failed to create booking');
+      setError(message);
+      showToast(message, 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading venue details...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-black text-white">Loading venue details...</div>;
+  }
+
+  if (error && !venue) {
+    return <div className="min-h-screen flex items-center justify-center bg-black text-red-300">{error}</div>;
   }
 
   if (!venue) {
-    return <div className="min-h-screen flex items-center justify-center">Venue not found.</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-black text-white">Venue not found</div>;
   }
 
-  return (
-    <div className="min-h-screen bg-[#F8F7F4]">
-      <div className="px-6 md:px-12 lg:px-24 py-10">
-        {message && (
-          <div className="mb-6 rounded-2xl border border-stone-200 bg-white px-5 py-4 text-sm text-[#57534E]">
-            {message}
-          </div>
-        )}
+  const heroImage = getVenueImage(venue);
+  const locationLabel = getVenueLocationLabel(venue);
 
-        <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-8">
+  return (
+    <div className="min-h-screen bg-black text-white">
+      <section className="max-w-7xl mx-auto px-4 py-10">
+        <div className="grid lg:grid-cols-[1.3fr_0.7fr] gap-8">
           <div>
-            <div className="grid md:grid-cols-[1.25fr_0.75fr] gap-4 mb-6">
-              <img
-                src={galleryImages[0] || FALLBACK_IMAGE}
-                alt={venue.title}
-                className="w-full h-[26rem] object-cover rounded-[2rem]"
-              />
-              <div className="grid gap-4">
-                {galleryImages.slice(1, 4).map((image, index) => (
-                  <img key={`${image}-${index}`} src={image} alt={`${venue.title} ${index + 2}`} className="w-full h-[8rem] object-cover rounded-[1.5rem]" />
+            <div className="rounded-3xl overflow-hidden border border-white/10 bg-[#111]">
+              {heroImage ? (
+                <img src={heroImage} alt={venue.name} className="w-full h-[420px] object-cover" />
+              ) : (
+                <div className="h-[420px] flex items-center justify-center text-gray-500">
+                  <ImageIcon className="w-12 h-12" />
+                </div>
+              )}
+            </div>
+
+            {galleryImages.length > 1 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                {galleryImages.slice(0, 4).map((image, index) => (
+                  <div key={`${image}-${index}`} className="rounded-2xl overflow-hidden border border-white/10 bg-[#111]">
+                    <img src={image} alt={`${venue.name} ${index + 1}`} className="w-full h-28 object-cover" />
+                  </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-[#101014] rounded-3xl border border-white/10 p-6 h-fit">
+            <div className="inline-flex px-3 py-1 rounded-full bg-white/10 text-sm text-purple-200 mb-4">
+              {venue.category || 'Venue'}
+            </div>
+            <h1 className="text-3xl font-bold mb-3">{venue.title || venue.name || 'Venue'}</h1>
+            <p className="text-gray-400 leading-relaxed mb-5">{venue.description || 'Venue details will be updated soon.'}</p>
+
+            <div className="space-y-3 text-sm text-gray-300 mb-6">
+              <div className="flex items-center gap-3">
+                <MapPin className="w-4 h-4 text-purple-300" />
+                <span>{locationLabel || 'Bhopal'}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Users className="w-4 h-4 text-purple-300" />
+                <span>Up to {venue.capacity || 0} guests</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <IndianRupee className="w-4 h-4 text-purple-300" />
+                <span>{toCurrency(venue.price)} per event</span>
               </div>
             </div>
 
+            <div className="space-y-2 mb-6">
+              {bookingHighlights.map((item) => (
+                <div key={item} className="flex items-center gap-2 text-sm text-gray-300">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => bookingSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              className="w-full bg-white text-black py-3 rounded-2xl font-semibold hover:bg-gray-100 transition-all"
+            >
+              Check Availability & Book
+            </button>
           </div>
+        </div>
+      </section>
 
-          <div className="space-y-6">
-            <div className="bg-white rounded-[2rem] border border-stone-200 p-6">
-              <div className="flex items-center justify-between mb-6">
-                {[
-                  { id: 'details', label: 'Details' },
-                  { id: 'availability', label: 'Availability' },
-                  { id: 'payment', label: 'Payment' }
-                ].map((item, index) => (
-                  <React.Fragment key={item.id}>
-                    <button
-                      onClick={() => {
-                        if (item.id === 'details') setStep('details');
-                        if (item.id === 'availability' && (step === 'availability' || step === 'payment' || step === 'success')) setStep('availability');
-                        if (item.id === 'payment' && (step === 'payment' || step === 'success')) setStep('payment');
-                      }}
-                      className={`text-sm font-medium ${step === item.id ? 'text-[#9A3412]' : 'text-[#A8A29E]'}`}
-                    >
-                      {item.label}
-                    </button>
-                    {index < 2 && <div className="h-px flex-1 mx-3 bg-stone-200" />}
-                  </React.Fragment>
-                ))}
+      <section className="max-w-7xl mx-auto px-4 pb-14">
+        <div className="grid lg:grid-cols-[0.95fr_1.05fr] gap-8">
+          <div className="bg-[#101014] rounded-3xl border border-white/10 p-6">
+            <h2 className="text-2xl font-bold mb-5">Venue Information</h2>
+
+            <div className="grid sm:grid-cols-2 gap-4 text-sm">
+              <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                <p className="text-gray-500 mb-1">Business</p>
+                <p>{venue.business_name || venue.vendor_name || 'Verified venue partner'}</p>
               </div>
+              <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                <p className="text-gray-500 mb-1">Occasions</p>
+                <p>{Array.isArray(venue.occasion_types) && venue.occasion_types.length > 0 ? venue.occasion_types.join(', ') : 'Wedding, parties, private events'}</p>
+              </div>
+              <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                <p className="text-gray-500 mb-1">Features</p>
+                <p>{Array.isArray(venue.features) && venue.features.length > 0 ? venue.features.join(', ') : 'Venue amenities coming soon'}</p>
+              </div>
+              <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                <p className="text-gray-500 mb-1">Packages</p>
+                <p>{Array.isArray(venue.packages) && venue.packages.length > 0 ? `${venue.packages.length} package options available` : 'Custom pricing available on request'}</p>
+              </div>
+            </div>
 
-              {step === 'details' && (
-                <div>
-                  <h2 className="font-heading text-3xl mb-3">Start Booking</h2>
-                  <p className="text-[#57534E] leading-relaxed mb-6">
-                    Review this venue, then continue to choose your date, time slot, and the services you want with your booking request.
-                  </p>
-                  <button onClick={moveToBooking} className="w-full bg-[#1C1917] text-white py-3 rounded-full font-medium hover:bg-[#9A3412] transition-all">
-                    Book This Venue
-                  </button>
+            <div className="mt-6 bg-white/5 rounded-2xl p-4 border border-white/10">
+              <h3 className="font-semibold mb-3">Booked Slots</h3>
+              {availability.length === 0 ? (
+                <p className="text-sm text-gray-400">No blocked dates yet. This venue is currently open for fresh booking requests.</p>
+              ) : (
+                <div className="space-y-2">
+                  {availability.slice(0, 8).map((slot) => (
+                    <div key={slot.id} className="flex items-center justify-between text-sm bg-black/30 rounded-xl px-3 py-2 border border-white/5">
+                      <span>{formatDate(slot.event_date)}</span>
+                      <span className="text-gray-400">{slot.event_time ? slot.event_time.slice(0, 5) : 'Whole day blocked'}</span>
+                    </div>
+                  ))}
                 </div>
               )}
+            </div>
+          </div>
 
-              {step === 'availability' && (
-                <div className="space-y-5">
-                  <h2 className="font-heading text-3xl">Choose Date And Services</h2>
-                  <div className="grid gap-4">
+          <div ref={bookingSectionRef} className="bg-[#101014] rounded-3xl border border-white/10 p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-2xl font-bold">Check Availability & Book</h2>
+                <p className="text-gray-400 mt-2">Choose your date, see available slots, and send a booking request to the venue owner.</p>
+              </div>
+              <div className="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm text-gray-300">
+                {availability.length} blocked slot{availability.length === 1 ? '' : 's'}
+              </div>
+            </div>
+
+            <form onSubmit={handleBooking} className="space-y-5">
+              <div className="grid md:grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="text-sm text-gray-400 mb-2 block">Your Name</span>
+                  <input
+                    type="text"
+                    name="booking_name"
+                    value={bookingForm.booking_name}
+                    onChange={handleInputChange}
+                    className="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 outline-none focus:border-white/30"
+                    required
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm text-gray-400 mb-2 block">Email</span>
+                  <input
+                    type="email"
+                    name="booking_email"
+                    value={bookingForm.booking_email}
+                    onChange={handleInputChange}
+                    className="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 outline-none focus:border-white/30"
+                    required
+                  />
+                </label>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="text-sm text-gray-400 mb-2 block">Phone Number</span>
+                  <input
+                    type="tel"
+                    name="booking_phone"
+                    value={bookingForm.booking_phone}
+                    onChange={handleInputChange}
+                    className="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 outline-none focus:border-white/30"
+                    placeholder="Enter contact number"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm text-gray-400 mb-2 block">Guests</span>
+                  <input
+                    type="number"
+                    name="guest_count"
+                    min="1"
+                    max={venue.capacity || 5000}
+                    value={bookingForm.guest_count}
+                    onChange={handleInputChange}
+                    className="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 outline-none focus:border-white/30"
+                    placeholder={`Up to ${venue.capacity || 0}`}
+                    required
+                  />
+                </label>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="text-sm text-gray-400 mb-2 block">Event Date</span>
+                  <div className="relative">
+                    <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                     <input
                       type="date"
-                      min={new Date().toISOString().split('T')[0]}
-                      value={bookingForm.eventDate}
-                      onChange={(event) => setBookingForm({ ...bookingForm, eventDate: event.target.value, eventTime: '' })}
-                      className="w-full px-4 py-3 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9A3412]"
-                    />
-
-                    {bookingForm.eventDate && (
-                      <div>
-                        <p className="text-xs tracking-[0.2em] uppercase font-bold text-[#78716C] mb-3">Available Time Slots</p>
-                        <div className="grid grid-cols-2 gap-3">
-                          {TIME_SLOTS.map((slot) => {
-                            const blocked = unavailableTimes.has(slot);
-                            return (
-                              <button
-                                key={slot}
-                                type="button"
-                                disabled={blocked}
-                                onClick={() => setBookingForm({ ...bookingForm, eventTime: slot })}
-                                className={`px-4 py-3 rounded-xl border text-sm ${
-                                  blocked
-                                    ? 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed'
-                                    : bookingForm.eventTime === slot
-                                      ? 'bg-[#1C1917] text-white border-[#1C1917]'
-                                      : 'bg-white text-[#44403C] border-stone-200'
-                                }`}
-                              >
-                                {formatSlotLabel(slot)}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <input
-                        type="text"
-                        placeholder="Your name"
-                        value={bookingForm.bookingName}
-                        onChange={(event) => setBookingForm({ ...bookingForm, bookingName: event.target.value })}
-                        className="w-full px-4 py-3 border border-stone-200 rounded-xl"
-                      />
-                      <input
-                        type="email"
-                        placeholder="Your email"
-                        value={bookingForm.bookingEmail}
-                        onChange={(event) => setBookingForm({ ...bookingForm, bookingEmail: event.target.value })}
-                        className="w-full px-4 py-3 border border-stone-200 rounded-xl"
-                      />
-                    </div>
-
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <input
-                        type="text"
-                        placeholder="Phone number"
-                        value={bookingForm.bookingPhone}
-                        onChange={(event) => setBookingForm({ ...bookingForm, bookingPhone: event.target.value })}
-                        className="w-full px-4 py-3 border border-stone-200 rounded-xl"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Guest count"
-                        value={bookingForm.guestCount}
-                        onChange={(event) => setBookingForm({ ...bookingForm, guestCount: event.target.value })}
-                        className="w-full px-4 py-3 border border-stone-200 rounded-xl"
-                      />
-                    </div>
-
-                    <input
-                      type="text"
-                      placeholder="Occasion type"
-                      value={bookingForm.occasionType}
-                      onChange={(event) => setBookingForm({ ...bookingForm, occasionType: event.target.value })}
-                      className="w-full px-4 py-3 border border-stone-200 rounded-xl"
-                    />
-
-                    {serviceOptions.length > 0 && (
-                      <div>
-                        <p className="text-xs tracking-[0.2em] uppercase font-bold text-[#78716C] mb-3">Select Services</p>
-                        <div className="flex flex-wrap gap-3">
-                          {serviceOptions.map((service) => {
-                            const selected = bookingForm.selectedServices.includes(service);
-                            return (
-                              <button
-                                key={service}
-                                type="button"
-                                onClick={() => toggleService(service)}
-                                className={`px-4 py-2 rounded-full text-sm border ${
-                                  selected
-                                    ? 'bg-[#9A3412] text-white border-[#9A3412]'
-                                    : 'bg-white text-[#44403C] border-stone-200'
-                                }`}
-                              >
-                                {service}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    <textarea
-                      placeholder="Extra notes for the vendor"
-                      value={bookingForm.message}
-                      onChange={(event) => setBookingForm({ ...bookingForm, message: event.target.value })}
-                      className="w-full min-h-28 px-4 py-3 border border-stone-200 rounded-2xl"
+                      name="event_date"
+                      min={today}
+                      value={bookingForm.event_date}
+                      onChange={handleInputChange}
+                      className="w-full rounded-2xl bg-white/5 border border-white/10 pl-11 pr-4 py-3 outline-none focus:border-white/30"
+                      required
                     />
                   </div>
-
-                  <button onClick={continueToPayment} className="w-full bg-[#1C1917] text-white py-3 rounded-full font-medium">
-                    Continue To Payment
-                  </button>
-                </div>
-              )}
-
-              {step === 'payment' && (
-                <div className="space-y-5">
-                  <h2 className="font-heading text-3xl">Payment Preference</h2>
-                  <p className="text-[#57534E] leading-relaxed">
-                    Online payments will be added later. Right now only pay on visit can complete the booking request.
-                  </p>
-
-                  <div className="grid gap-3">
-                    {[
-                      { id: 'on_visit', label: 'Pay On Visit', enabled: true, note: 'Available now' },
-                      { id: 'upi', label: 'UPI', enabled: false, note: 'Coming soon' },
-                      { id: 'card', label: 'Card', enabled: false, note: 'Coming soon' },
-                      { id: 'net_banking', label: 'Net Banking', enabled: false, note: 'Coming soon' }
-                    ].map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        disabled={!option.enabled}
-                        onClick={() => option.enabled && setBookingForm({ ...bookingForm, paymentMethod: option.id })}
-                        className={`w-full text-left px-4 py-4 rounded-2xl border ${
-                          bookingForm.paymentMethod === option.id
-                            ? 'border-[#1C1917] bg-[#F5F5F4]'
-                            : 'border-stone-200 bg-white'
-                        } ${!option.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium flex items-center gap-2"><CreditCard size={16} /> {option.label}</span>
-                          <span className="text-xs text-[#57534E]">{option.note}</span>
-                        </div>
-                      </button>
+                </label>
+                <label className="block">
+                  <span className="text-sm text-gray-400 mb-2 block">Occasion</span>
+                  <select
+                    name="occasion_type"
+                    value={bookingForm.occasion_type}
+                    onChange={handleInputChange}
+                    className="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 outline-none focus:border-white/30"
+                  >
+                    {OCCASIONS.map((occasion) => (
+                      <option key={occasion} value={occasion} className="bg-[#101014]">
+                        {occasion}
+                      </option>
                     ))}
-                  </div>
+                  </select>
+                </label>
+              </div>
 
-                  <div className="rounded-2xl bg-[#FFF7ED] px-4 py-4 text-sm text-[#9A3412]">
-                    Booking note: after the vendor accepts your request, your booking will be successfully done within 24 hours.
+              <div>
+                <span className="text-sm text-gray-400 mb-2 block">Available Time Slots</span>
+                {!bookingForm.event_date ? (
+                  <p className="text-sm text-gray-500">Choose a date to see the open time slots.</p>
+                ) : isDateFullyBooked ? (
+                  <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                    This date is fully booked. Please pick another date.
                   </div>
+                ) : (
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {TIME_SLOTS.map((slot) => {
+                      const blocked = blockedTimesForSelectedDate.includes(slot);
+                      const selected = bookingForm.event_time === slot;
 
-                  <div className="flex gap-3">
-                    <button onClick={() => setStep('availability')} className="px-5 py-3 rounded-full border border-stone-200 text-[#44403C]">
-                      Back
-                    </button>
-                    <button
-                      onClick={submitBooking}
-                      disabled={submitting}
-                      className="flex-1 bg-[#1C1917] text-white py-3 rounded-full font-medium disabled:opacity-50"
-                    >
-                      {submitting ? 'Sending Request...' : 'Confirm Booking Request'}
-                    </button>
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          disabled={blocked}
+                          onClick={() => setBookingForm((current) => ({ ...current, event_time: slot }))}
+                          className={`rounded-2xl border px-4 py-3 text-left transition-all ${
+                            blocked
+                              ? 'border-white/5 bg-white/5 text-gray-600 cursor-not-allowed'
+                              : selected
+                                ? 'border-white bg-white text-black'
+                                : 'border-white/10 bg-white/5 hover:border-white/30'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 text-sm font-medium">
+                            <Clock3 className="w-4 h-4" />
+                            <span>{slot.slice(0, 5)}</span>
+                          </div>
+                          <p className="text-xs mt-1 opacity-80">{blocked ? 'Already booked' : 'Available'}</p>
+                        </button>
+                      );
+                    })}
                   </div>
+                )}
+              </div>
+
+              <label className="block">
+                <span className="text-sm text-gray-400 mb-2 block">Payment Method</span>
+                <select
+                  name="payment_method"
+                  value={bookingForm.payment_method}
+                  onChange={handleInputChange}
+                  className="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 outline-none focus:border-white/30"
+                >
+                  <option value="on_visit" className="bg-[#101014]">Pay on visit</option>
+                  <option value="upi" className="bg-[#101014]">UPI</option>
+                  <option value="card" className="bg-[#101014]">Card</option>
+                  <option value="cash" className="bg-[#101014]">Cash</option>
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="text-sm text-gray-400 mb-2 block">Message to Venue</span>
+                <textarea
+                  name="message"
+                  value={bookingForm.message}
+                  onChange={handleInputChange}
+                  rows={4}
+                  className="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 outline-none focus:border-white/30 resize-none"
+                  placeholder="Share your event details, decoration needs, or any questions."
+                />
+              </label>
+
+              {error && (
+                <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                  {error}
                 </div>
               )}
 
-              {step === 'success' && (
-                <div className="text-center py-8">
-                  <CheckCircle2 className="mx-auto text-[#166534] mb-4" size={44} />
-                  <h2 className="font-heading text-3xl mb-3">Request Sent To Vendor</h2>
-                  <p className="text-[#57534E] leading-relaxed mb-6">
-                    Your request is now with this venue vendor. Once they accept it, your booking will be confirmed. Please expect an update within 24 hours.
-                  </p>
-                  <div className="flex gap-3 justify-center">
-                    <button onClick={() => navigate('/my-bookings')} className="px-5 py-3 rounded-full bg-[#1C1917] text-white">
-                      View My Bookings
-                    </button>
-                    <button onClick={() => navigate('/services')} className="px-5 py-3 rounded-full border border-stone-200 text-[#44403C]">
-                      Browse More Venues
-                    </button>
-                  </div>
+              {successMessage && (
+                <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                  {successMessage}
                 </div>
               )}
-            </div>
+
+              {!user && (
+                <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                  Log in as a user to send a booking request for this venue.
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting || isDateFullyBooked}
+                className="w-full bg-white text-black py-3 rounded-2xl font-semibold hover:bg-gray-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Sending Booking Request...' : 'Book This Venue'}
+              </button>
+            </form>
           </div>
-         
         </div>
-        <div className="w-full px-4 md:px-10 lg:px-20 py-8 bg-gradient-to-b from-white to-stone-50">
-
-          {/* Tags */}
-          <div className="flex flex-wrap items-center gap-3 mb-6">
-            {venue.category && (
-              <span className="text-xs px-4 py-1.5 rounded-full bg-orange-100 text-orange-800 font-medium shadow-sm">
-                {venue.category}
-              </span>
-            )}
-            {venue.status && (
-              <span className="text-xs px-4 py-1.5 rounded-full bg-green-100 text-green-700 font-medium shadow-sm">
-                {venue.status}
-              </span>
-            )}
-          </div>
-
-          {/* Title */}
-          <h1 className="font-heading text-3xl md:text-5xl font-bold mb-4 text-stone-900">
-            {venue.title}
-          </h1>
-
-          {/* Description */}
-          <p className="text-stone-600 text-base md:text-lg leading-relaxed mb-8 max-w-4xl">
-            {venue.description}
-          </p>
-
-          {/* Info Grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
-
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-white shadow-sm hover:shadow-md transition">
-              <MapPin size={18} className="text-orange-500" />
-              <span>{venue.location || 'Location shared later'}</span>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-white shadow-sm hover:shadow-md transition">
-              <CalendarDays size={18} className="text-blue-500" />
-              <span>Capacity {venue.capacity || 'Flexible'}</span>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-white shadow-sm hover:shadow-md transition">
-              <IndianRupee size={18} className="text-green-600" />
-              <span>Starting from {venue.price || 'On request'}</span>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-white shadow-sm hover:shadow-md transition">
-              <Sparkles size={18} className="text-purple-500" />
-              <span>Managed by {venue.business_name}</span>
-            </div>
-
-          </div>
-
-          {/* Occasion Types */}
-          {Array.isArray(venue.occasion_types) && venue.occasion_types.length > 0 && (
-            <div className="mb-10">
-              <h2 className="font-heading text-2xl font-semibold mb-4 text-stone-900">
-                Perfect For
-              </h2>
-              <div className="flex flex-wrap gap-3">
-                {venue.occasion_types.map((item) => (
-                  <span
-                    key={item}
-                    className="text-sm px-4 py-2 rounded-full bg-stone-100 text-stone-700 hover:bg-stone-200 transition"
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Services */}
-          {serviceOptions.length > 0 && (
-            <div className="mb-10">
-              <h2 className="font-heading text-2xl font-semibold mb-4 text-stone-900">
-                Available Services
-              </h2>
-              <div className="flex flex-wrap gap-3">
-                {serviceOptions.map((item) => (
-                  <span
-                    key={item}
-                    className="text-sm px-4 py-2 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Video Button */}
-          {venue.video_url && (
-            <a
-              href={venue.video_url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white hover:bg-stone-800 transition shadow-md"
-            >
-              <Video size={18} />
-              Watch Venue Video
-            </a>
-          )}
-        </div>
-      </div>
+      </section>
     </div>
   );
 };

@@ -2,7 +2,9 @@ import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { authAPI } from '../services/api';
+import { getErrorMessage } from '../utils/errors';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -10,18 +12,17 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted with data:', formData);
     setError('');
     setLoading(true);
 
     try {
-      console.log('Calling authAPI.login...');
       const response = await authAPI.login(formData);
-      console.log('Login response received:', response);
       login(response.user, response.token);
+      showToast(`Welcome back, ${response.user.name || 'user'}!`, 'success');
       
       if (response.user.role === 'admin') {
         navigate('/admin');
@@ -32,8 +33,9 @@ const Login = () => {
       }
     } catch (err) {
       console.error('Login error details:', err);
-      console.error('Error message:', err.message);
-      setError(err.data?.message || err.message || 'Login failed');
+      const message = getErrorMessage(err, 'Login failed');
+      setError(message);
+      showToast(message, 'error');
     } finally {
       setLoading(false);
     }

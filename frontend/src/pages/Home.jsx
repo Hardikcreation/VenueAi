@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, MapPinned, SlidersHorizontal, Search, MapPin } from 'lucide-react';
+import { CalendarDays, MapPinned, SlidersHorizontal, Search, MapPin, Sparkles, Clock, Users, Star, TrendingUp, Filter, X, ChevronRight, Heart, Share2, Navigation, Mail, Phone, MessageSquare, Quote, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import VenueCard from './VenueCard';
 import { bookingAPI, productAPI } from '../services/api';
-import { BACKEND_BASE_URL } from '../config/env';
+import { getVenueImage, getVenueLocationLabel, matchesVenueSearch } from '../utils/venues';
 
 const CATEGORIES = ['Gardens', 'Farmhouses', 'Resorts', 'Banquet Halls', 'Lawns'];
 const TIME_SLOTS = ['10:00:00', '13:00:00', '16:00:00', '19:00:00'];
@@ -34,8 +33,8 @@ const CAT_EMOJI = {
 };
 
 const CAT_BG = {
-  Gardens: '#e1f5ee', Farmhouses: '#faeeda', Resorts: '#e6f1fb',
-  'Banquet Halls': '#eeedfe', Lawns: '#eaf3de',
+  Gardens: '#1e2a2a', Farmhouses: '#2a1f1a', Resorts: '#1a2330',
+  'Banquet Halls': '#252040', Lawns: '#1f2a1f',
 };
 
 export default function Home() {
@@ -82,7 +81,7 @@ export default function Home() {
       if (category !== 'All' && v.category !== category) return false;
       if (cap && cap < guestCount) return false;
       if (price < minPrice || price > maxPrice) return false;
-      if (searchQuery && !v.name?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (!matchesVenueSearch(v, searchQuery)) return false;
       if (selectedDate) {
         const blocked = (availability[v.id] || []).filter(
           (s) => s.event_date?.slice(0, 10) === selectedDate
@@ -98,302 +97,404 @@ export default function Home() {
     setMinPrice(0); setMaxPrice(250000); setSearchQuery('');
   };
 
+  const heroStats = useMemo(() => {
+    const categories = new Set(venues.map((venue) => venue.category).filter(Boolean));
+    const locations = new Set(
+      venues
+        .map((venue) => getVenueLocationLabel(venue))
+        .filter(Boolean)
+    );
+    const averagePrice = venues.length
+      ? Math.round(venues.reduce((sum, venue) => sum + Number(venue.price || 0), 0) / venues.length)
+      : 0;
+
+    return [
+      { num: `${venues.length}+`, label: 'Approved Venues', icon: '🏛️' },
+      { num: String(categories.size || 0), label: 'Categories', icon: '🎯' },
+      { num: `${locations.size}+`, label: 'Areas Covered', icon: '📍' },
+      { num: averagePrice ? toCurrency(averagePrice) : '₹0', label: 'Average Starting Price', icon: '💸' },
+    ];
+  }, [venues]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const trimmedQuery = searchQuery.trim();
+    navigate(trimmedQuery ? `/services?q=${encodeURIComponent(trimmedQuery)}` : '/services');
+  };
+
+  const getAvailableSlotCount = (venueId, date) => {
+    if (!date) return TIME_SLOTS.length;
+    const blocked = (availability[venueId] || []).filter(
+      (slot) => slot.event_date?.slice(0, 10) === date
+    );
+    return Math.max(TIME_SLOTS.length - blocked.length, 0);
+  };
+
   return (
-    <div className="min-h-screen bg-[#f6f4f0]">
+    <div className="min-h-screen bg-black text-white">
+      {/* Hero Section with Dark Theme */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-purple-900/40 via-black to-pink-900/40 pt-20 pb-32 px-4">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=2070')] bg-cover bg-center opacity-10"></div>
+        <div className="relative z-10 max-w-7xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-full px-4 py-2 mb-6 border border-white/20">
+            <Sparkles className="w-4 h-4 text-purple-400" />
+            <span className="text-sm font-medium">Bhopal's #1 Venue Discovery Platform</span>
+          </div>
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
+            Find Your <span className="text-purple-400">Perfect</span>
+            <br />Venue in Bhopal
+          </h1>
+          <p className="text-lg text-gray-300 mb-10 max-w-2xl mx-auto">
+            Gardens · Farmhouses · Resorts · Banquet Halls · Lawns
+            <br />Discover and book the finest event spaces across the city with confidence.
+          </p>
 
-      {/* ── HERO ── */}
-      <section
-        className="relative overflow-hidden flex flex-col items-center justify-center text-center px-6 py-20 mx-4 mt-4 rounded-3xl"
-        style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 45%, #0f3460 75%, #533483 100%)' }}
-      >
-        {/* decorative circles */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute w-96 h-96 rounded-full bg-white opacity-[0.06] -top-24 -right-16" />
-          <div className="absolute w-64 h-64 rounded-full bg-white opacity-[0.04] -bottom-12 -left-8" />
+          {/* Search Bar with Light Button */}
+          <form className="max-w-3xl mx-auto" onSubmit={handleSearchSubmit}>
+            <div className="flex flex-col md:flex-row gap-3 bg-black/60 backdrop-blur-xl rounded-2xl p-2 border border-white/20">
+              <div className="flex-1 flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3">
+                <Search className="w-5 h-5 text-purple-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search venues by name, location, or category..."
+                  className="flex-1 bg-transparent outline-none text-white placeholder:text-gray-400"
+                />
+              </div>
+              <button type="submit" className="bg-white text-black px-8 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all flex items-center justify-center gap-2">
+                <Search className="w-4 h-4" />
+                Search
+              </button>
+            </div>
+          </form>
+
+          {/* Stats */}
+          <div className="flex flex-wrap justify-center gap-8 md:gap-12 mt-16">
+            {heroStats.map((stat) => (
+              <div key={stat.label} className="text-center">
+                <div className="text-3xl font-bold text-white">{stat.num}</div>
+                <div className="text-sm text-gray-400 flex items-center gap-1">
+                  <span>{stat.icon}</span>
+                  <span>{stat.label}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+      </section>
 
-        <span className="relative z-10 mb-5 inline-block border border-white/25 bg-white/10 text-white text-xs tracking-wider px-4 py-1.5 rounded-full">
-          Bhopal's #1 Venue Discovery Platform
-        </span>
+      {/* Filters Section - Dark Theme */}
+      
 
-        <h1 className="relative z-10 text-4xl md:text-5xl font-semibold text-white leading-tight mb-4">
-          Find Your <span className="text-purple-300">Perfect</span>
-          <br />Venue in Bhopal
-        </h1>
-        <p className="relative z-10 text-white/60 text-sm mb-8 max-w-md leading-relaxed">
-          Gardens · Farmhouses · Resorts · Banquet Halls · Lawns
-          <br />Discover and book the finest event spaces across the city.
-        </p>
-
-        {/* search bar */}
-        <div className="relative z-10 w-full max-w-lg flex items-center bg-white rounded-full px-5 py-1.5 shadow-xl gap-3">
-          <Search size={15} className="text-gray-400 flex-shrink-0" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search venues by name…"
-            className="flex-1 text-sm text-gray-800 placeholder-gray-400 outline-none bg-transparent"
-          />
+      {/* Results Section with Light Buttons */}
+      <section className="px-4 pb-16 max-w-7xl mx-auto">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="bg-white/10 p-2 rounded-xl">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <h2 className="text-xl font-bold">Available Venues</h2>
+          </div>
           <button
-            className="bg-[#533483] text-white text-sm rounded-full px-5 py-2 font-medium hover:opacity-90 transition"
-            onClick={() => { }}
+            onClick={() => navigate('/services')}
+            className="bg-white text-black px-4 py-2 rounded-xl font-semibold hover:bg-gray-100 transition-all flex items-center gap-2"
           >
-            Search
+            <span>View All Services</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
-        {/* stats */}
-        <div className="relative z-10 flex items-center gap-8 mt-8">
-          {[['120+', 'Venues'], ['5', 'Categories'], ['2K+', 'Events hosted']].map(([n, l], i, arr) => (
-            <React.Fragment key={l}>
-              <div className="text-center">
-                <div className="text-xl font-semibold text-white">{n}</div>
-                <div className="text-xs text-white/50 mt-0.5">{l}</div>
-              </div>
-              {i < arr.length - 1 && <div className="w-px h-8 bg-white/20" />}
-            </React.Fragment>
-          ))}
-        </div>
-      </section>
-
-      {/* ── FILTERS ── */}
-      <section className="px-4 py-6">
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-sm font-semibold flex items-center gap-2 text-gray-800">
-              <SlidersHorizontal size={15} /> Refine your search
-            </h2>
-            <button
-              onClick={resetFilters}
-              className="text-xs text-gray-500 border border-gray-200 rounded-full px-4 py-1.5 hover:bg-gray-50 transition"
-            >
-              Reset
-            </button>
+        {loading ? (
+          <div className="text-center py-16 bg-[#0F0F12] rounded-2xl border border-white/10">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent"></div>
+              <p className="text-gray-400">Discovering perfect venues for you...</p>
+            </div>
           </div>
-
-          {/* category chips */}
-          <div className="flex flex-wrap gap-2 mb-5">
-            {['All', ...CATEGORIES].map((item) => (
+        ) : filteredVenues.length === 0 ? (
+          <div className="text-center py-16 bg-[#0F0F12] rounded-2xl border border-white/10">
+            <div className="flex flex-col items-center gap-4">
+              <div className="bg-white/5 p-4 rounded-full">
+                <Search className="w-6 h-6 text-gray-400" />
+              </div>
+              <p className="text-gray-400">No venues match your filters</p>
               <button
-                key={item}
-                onClick={() => setCategory(item)}
-                className={`px-4 py-1.5 rounded-full text-xs transition font-medium ${category === item
-                    ? 'bg-[#1a1a2e] text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                onClick={resetFilters}
+                className="text-sm text-gray-400 hover:text-white font-medium underline"
+              >
+                Clear all filters
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredVenues.map((venue) => (
+              <article
+                key={venue.id}
+                onClick={() => setSelectedVenueId(venue.id)}
+                className={`group bg-[#0F0F12] rounded-[28px] border overflow-hidden transition-all cursor-pointer hover:-translate-y-1 hover:shadow-2xl ${selectedVenueId === venue.id
+                    ? 'border-white shadow-lg'
+                    : 'border-white/10 hover:border-white/40'
                   }`}
               >
-                {item === 'All' ? 'All venues' : item}
-              </button>
-            ))}
-          </div>
-
-          {/* filter grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-[10px] uppercase tracking-widest font-semibold text-gray-400 mb-1.5">
-                Guests
-              </label>
-              <input
-                type="range" min="50" max="1000" step="10" value={guestCount}
-                onChange={(e) => setGuestCount(Number(e.target.value))}
-                className="w-full accent-[#533483]"
-              />
-              <p className="text-xs text-gray-600 mt-1">{guestCount} guests</p>
-            </div>
-
-            <div>
-              <label className="block text-[10px] uppercase tracking-widest font-semibold text-gray-400 mb-1.5">
-                Date
-              </label>
-              <div className="relative">
-                <CalendarDays className="absolute left-3 top-2.5 text-gray-400" size={13} />
-                <input
-                  type="date" value={selectedDate}
-                  min={new Date().toISOString().split('T')[0]}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="pl-8 w-full border border-gray-200 rounded-xl py-2 text-xs text-gray-700 outline-none focus:border-[#533483] bg-gray-50"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[10px] uppercase tracking-widest font-semibold text-gray-400 mb-1.5">
-                Min price
-              </label>
-              <input
-                value={toCurrency(minPrice)}
-                onChange={(e) => setMinPrice(Math.min(Number(e.target.value.replace(/[^\d]/g, '') || 0), maxPrice))}
-                className="w-full border border-gray-200 rounded-xl py-2 px-3 text-xs text-gray-700 outline-none focus:border-[#533483] bg-gray-50"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] uppercase tracking-widest font-semibold text-gray-400 mb-1.5">
-                Max price
-              </label>
-              <input
-                value={toCurrency(maxPrice)}
-                onChange={(e) => setMaxPrice(Math.max(Number(e.target.value.replace(/[^\d]/g, '') || 0), minPrice))}
-                className="w-full border border-gray-200 rounded-xl py-2 px-3 text-xs text-gray-700 outline-none focus:border-[#533483] bg-gray-50"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── RESULTS + MAP ── */}
-      <section className="px-4 pb-16">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-gray-800">Available venues</h2>
-          <span className="text-xs text-gray-400">
-            {loading ? 'Loading…' : `${filteredVenues.length} result${filteredVenues.length !== 1 ? 's' : ''}`}
-          </span>
-        </div>
-
-        <div className="grid lg:grid-cols-2 gap-5">
-
-          {/* venue list */}
-          <div className="space-y-3 max-h-[80vh] overflow-y-auto pr-1">
-            {loading ? (
-              <div className="text-center py-10 bg-white rounded-2xl border border-gray-100 text-sm text-gray-400">
-                Loading venues…
-              </div>
-            ) : filteredVenues.length === 0 ? (
-              <div className="text-center py-10 bg-white rounded-2xl border border-gray-100 text-sm text-gray-400">
-                No venues match your filters
-              </div>
-            ) : (
-              filteredVenues.map((venue) => (
                 <div
-                  key={venue.id}
-                  onClick={() => setSelectedVenueId(venue.id)}
-                  className={`bg-white rounded-2xl border transition cursor-pointer hover:shadow-md ${selectedVenueId === venue.id ? 'border-[#533483]' : 'border-gray-100 hover:border-gray-300'
-                    }`}
+                  className="relative h-56 overflow-hidden"
+                  style={{ background: CAT_BG[venue.category] || '#1a1a1f' }}
                 >
-                  <div className="flex gap-3 p-4">
-                    {/* thumbnail / emoji fallback */}
-                    <div
-                      className="w-20 h-20 rounded-xl flex-shrink-0 flex items-center justify-center text-3xl"
-                      style={{ background: CAT_BG[venue.category] || '#f1efe8' }}
-                    >
-                      {venue.thumbnail ? (
-                        <img src={`${BACKEND_BASE_URL}${venue.thumbnail}`} alt={venue.name} className="w-full h-full object-cover rounded-xl" />
-                      ) : (
-                        CAT_EMOJI[venue.category] || '🏛️'
-                      )}
+                  {getVenueImage(venue) ? (
+                    <img
+                      src={getVenueImage(venue)}
+                      alt={venue.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-6xl bg-white/5">
+                      {CAT_EMOJI[venue.category] || '🏛️'}
                     </div>
+                  )}
 
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{venue.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5 mb-2">{venue.area || venue.location} · up to {venue.capacity} guests</p>
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
-                          {venue.category}
-                        </span>
-                        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
-                          {Number(venue.capacity) >= 500 ? 'Large' : Number(venue.capacity) >= 300 ? 'Medium' : 'Intimate'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-gray-800">{toCurrency(venue.price)}</span>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); navigate(`/venues/${venue.id}`); }}
-                            className="text-xs px-3 py-1.5 rounded-full border border-gray-200 hover:bg-gray-50 transition text-gray-700"
-                          >
-                            Details
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); navigate(`/venues/${venue.id}`, { state: { startBooking: true } }); }}
-                            className="text-xs px-3 py-1.5 rounded-full bg-[#1a1a2e] text-white hover:opacity-90 transition"
-                          >
-                            Book now
-                          </button>
+                  <div className="absolute inset-x-0 top-0 p-4 flex items-start justify-between gap-3">
+                    <span className="text-xs px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-white border border-white/10">
+                      {CAT_EMOJI[venue.category]} {venue.category}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 rounded-full bg-black/45 backdrop-blur-md hover:bg-black/70 transition-colors"
+                      >
+                        <Heart className="w-4 h-4 text-white/80 hover:text-red-400" />
+                      </button>
+                      <button
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 rounded-full bg-black/45 backdrop-blur-md hover:bg-black/70 transition-colors"
+                      >
+                        <Share2 className="w-4 h-4 text-white/80 hover:text-blue-400" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
+                    <div className="flex items-end justify-between gap-3">
+                      <div>
+                        <h3 className="text-xl font-bold text-white">{venue.name}</h3>
+                        <div className="flex items-center gap-2 text-sm text-gray-200 mt-1">
+                          <MapPin className="w-4 h-4" />
+                          <span className="truncate">{getVenueLocationLabel(venue) || 'Location coming soon'}</span>
                         </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xl font-bold text-white">{toCurrency(venue.price)}</div>
+                        <div className="text-xs text-gray-300">per event</div>
                       </div>
                     </div>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
 
-          {/* map */}
-          <div className="sticky top-4">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <MapPinned size={15} className="text-gray-400" />
-                <span className="text-sm font-semibold text-gray-700">Bhopal map</span>
-              </div>
-
-              <div
-                className="relative rounded-xl overflow-hidden"
-                style={{ aspectRatio: '4/3', background: '#e8f0e9' }}
-              >
-                {/* grid */}
-                {[25, 50, 75].map((p) => (
-                  <React.Fragment key={p}>
-                    <div className="absolute left-0 right-0 bg-white/50" style={{ top: `${p}%`, height: '0.5px' }} />
-                    <div className="absolute top-0 bottom-0 bg-white/50" style={{ left: `${p}%`, width: '0.5px' }} />
-                  </React.Fragment>
-                ))}
-                {/* roads */}
-                <div className="absolute left-0 right-0 bg-white/80" style={{ top: '38%', height: '3px' }} />
-                <div className="absolute top-0 bottom-0 bg-white/80" style={{ left: '52%', width: '3px' }} />
-
-                {/* landmarks */}
-                {LANDMARKS.map((lm) => {
-                  const pt = toMapPoint(lm.lat, lm.lng);
-                  return (
-                    <div
-                      key={lm.label}
-                      className="absolute text-[10px] bg-white px-2 py-0.5 rounded-full shadow border border-gray-200 whitespace-nowrap text-gray-600"
-                      style={{ left: `${pt.x}%`, top: `${pt.y}%`, transform: 'translate(-50%,-50%)' }}
-                    >
-                      {lm.label}
+                <div className="p-5">
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="rounded-2xl bg-white/[0.04] border border-white/10 px-4 py-3">
+                      <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-[0.18em] mb-2">
+                        <Users className="w-4 h-4" />
+                        Capacity
+                      </div>
+                      <div className="font-semibold text-white">Up to {venue.capacity || 0}</div>
                     </div>
-                  );
-                })}
-
-                {/* venue pins */}
-                {filteredVenues.map((venue) => {
-                  if (!venue.latitude || !venue.longitude) return null;
-                  const pt = toMapPoint(Number(venue.latitude), Number(venue.longitude));
-                  const isSelected = selectedVenueId === venue.id;
-                  return (
-                    <div
-                      key={venue.id}
-                      onClick={() => setSelectedVenueId(venue.id)}
-                      title={venue.name}
-                      className="absolute cursor-pointer"
-                      style={{
-                        left: `${pt.x}%`, top: `${pt.y}%`,
-                        transform: 'translate(-50%, -100%)',
-                        width: 18, height: 18,
-                        borderRadius: '50% 50% 50% 0',
-                        rotate: '-45deg',
-                        background: isSelected ? '#1a1a2e' : '#533483',
-                        border: '2px solid #fff',
-                      }}
-                    />
-                  );
-                })}
-              </div>
-
-              {/* legend */}
-              <div className="flex gap-4 mt-3">
-                {[['#533483', 'Venue'], ['#1a1a2e', 'Selected']].map(([color, label]) => (
-                  <div key={label} className="flex items-center gap-1.5 text-xs text-gray-400">
-                    <div className="w-2 h-2 rounded-full" style={{ background: color }} />
-                    {label}
+                    <div className="rounded-2xl bg-white/[0.04] border border-white/10 px-4 py-3">
+                      <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-[0.18em] mb-2">
+                        <Clock className="w-4 h-4" />
+                        Availability
+                      </div>
+                      <div className="font-semibold text-white">
+                        {selectedDate ? `${getAvailableSlotCount(venue.id, selectedDate)} slots open` : 'Check date'}
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
+
+                  <div className="flex flex-wrap gap-2 mb-5">
+                    <span className="text-xs px-3 py-1 rounded-full bg-white/10 text-gray-300 border border-white/20">
+                      {Number(venue.capacity) >= 500 ? 'Large Event' : Number(venue.capacity) >= 300 ? 'Medium Gathering' : 'Intimate Setting'}
+                    </span>
+                    {(venue.business_name || venue.vendor_name) && (
+                      <span className="text-xs px-3 py-1 rounded-full bg-white/10 text-gray-300 border border-white/20">
+                        {venue.business_name || venue.vendor_name}
+                      </span>
+                    )}
+                    {!!venue.gallery_images?.length && (
+                      <span className="text-xs px-3 py-1 rounded-full bg-white/10 text-gray-300 border border-white/20">
+                        {venue.gallery_images.length} photos
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/venues/${venue.id}`); }}
+                      className="flex-1 text-sm px-4 py-3 rounded-2xl border border-white/20 hover:bg-white/5 transition-all font-medium"
+                    >
+                      View Details
+                      <ChevronRight className="w-4 h-4 inline ml-1" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/venues/${venue.id}`, { state: { startBooking: true } }); }}
+                      className="flex-1 text-sm px-4 py-3 rounded-2xl bg-white text-black hover:bg-gray-100 transition-all font-semibold flex items-center justify-center gap-1"
+                    >
+                      Book Now
+                      <Navigation className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {selectedVenueId === venue.id && (
+                    <div className="mt-4 rounded-2xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-300">
+                      {selectedDate
+                        ? `${getAvailableSlotCount(venue.id, selectedDate)} of ${TIME_SLOTS.length} booking slots are still open on ${selectedDate}.`
+                        : 'Pick a date in filters to see live slot availability for this venue.'}
+                    </div>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Testimonials Section with Light Simple Buttons */}
+      <section className="px-4 py-16 bg-gradient-to-br from-purple-900/20 via-black to-pink-900/20">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="bg-white/10 p-3 rounded-xl inline-block mb-4">
+              <Star className="w-6 h-6 text-white" />
             </div>
+            <h2 className="text-3xl font-bold mb-4">What Our Customers Say</h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">Real stories from real people who found their perfect venue with us</p>
           </div>
 
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                name: "Priya Sharma",
+                event: "Wedding Reception",
+                venue: "Royal Garden Resort",
+                rating: 5,
+                comment: "Amazing experience! The venue was perfect for our wedding. The booking process was smooth and the staff was very helpful. Highly recommend!",
+                avatar: "👩‍💼"
+              },
+              {
+                name: "Rahul Verma",
+                event: "Corporate Event",
+                venue: "Grand Banquet Hall",
+                rating: 5,
+                comment: "Found the perfect venue for our company annual meet. The platform made it so easy to compare options and book. Excellent service!",
+                avatar: "👨‍💼"
+              },
+              {
+                name: "Anjali Patel",
+                event: "Birthday Party",
+                venue: "Sunshine Farmhouse",
+                rating: 4,
+                comment: "Beautiful farmhouse with amazing ambiance. The booking process was seamless and the venue exceeded our expectations. Will definitely book again!",
+                avatar: "👩‍🎓"
+              }
+            ].map((testimonial, index) => (
+              <div key={index} className="bg-[#0F0F12] rounded-2xl p-6 border border-white/10 hover:shadow-xl transition-all">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="text-4xl">{testimonial.avatar}</div>
+                  <div className="flex-1">
+                    <h4 className="font-bold">{testimonial.name}</h4>
+                    <p className="text-sm text-gray-400">{testimonial.event}</p>
+                  </div>
+                  <div className="flex">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                    ))}
+                  </div>
+                </div>
+                <div className="relative">
+                  <Quote className="w-5 h-5 text-white/20 absolute -top-2 -left-2" />
+                  <p className="text-gray-300 italic pl-6">{testimonial.comment}</p>
+                </div>
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <p className="text-sm text-gray-400 font-semibold">📍 {testimonial.venue}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section with Light Buttons */}
+      <section className="px-4 py-16 max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <div className="bg-white/10 p-3 rounded-xl inline-block mb-4">
+            <MessageSquare className="w-6 h-6 text-white" />
+          </div>
+          <h2 className="text-3xl font-bold mb-4">Get in Touch</h2>
+          <p className="text-gray-400 max-w-2xl mx-auto">Have questions? We're here to help you find the perfect venue for your special event</p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8 mb-12">
+          <div className="text-center group">
+            <div className="bg-white/10 p-4 rounded-2xl inline-block mb-4 group-hover:scale-110 transition-all">
+              <Phone className="w-7 h-7 text-white" />
+            </div>
+            <h3 className="font-bold mb-2">Call Us</h3>
+            <p className="text-gray-400 mb-1">Mon-Sat: 9AM-8PM</p>
+            <a href="tel:+919876543210" className="text-gray-400 font-semibold hover:text-white">+91 98765 43210</a>
+          </div>
+
+          <div className="text-center group">
+            <div className="bg-white/10 p-4 rounded-2xl inline-block mb-4 group-hover:scale-110 transition-all">
+              <Mail className="w-7 h-7 text-white" />
+            </div>
+            <h3 className="font-bold mb-2">Email Us</h3>
+            <p className="text-gray-400 mb-1">24/7 Support</p>
+            <a href="mailto:info@venueai.com" className="text-gray-400 font-semibold hover:text-white">info@venueai.com</a>
+          </div>
+
+          <div className="text-center group">
+            <div className="bg-white/10 p-4 rounded-2xl inline-block mb-4 group-hover:scale-110 transition-all">
+              <MapPin className="w-7 h-7 text-white" />
+            </div>
+            <h3 className="font-bold mb-2">Visit Us</h3>
+            <p className="text-gray-400 mb-1">MP Nagar, Zone-I</p>
+            <span className="text-gray-400 font-semibold">Bhopal, Madhya Pradesh</span>
+          </div>
+        </div>
+
+        <div className="bg-[#0F0F12] rounded-3xl p-8 border border-white/10">
+          <div className="max-w-2xl mx-auto">
+            <h3 className="text-2xl font-bold mb-6 text-center">Send us a Message</h3>
+            <form className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="Your Name"
+                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 focus:border-white outline-none text-white placeholder:text-gray-500"
+                />
+                <input
+                  type="email"
+                  placeholder="Your Email"
+                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 focus:border-white outline-none text-white placeholder:text-gray-500"
+                />
+              </div>
+              <input
+                type="tel"
+                placeholder="Your Phone Number"
+                className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 focus:border-white outline-none text-white placeholder:text-gray-500"
+              />
+              <textarea
+                placeholder="Tell us about your event..."
+                rows={4}
+                className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 focus:border-white outline-none text-white placeholder:text-gray-500 resize-none"
+              />
+              <button
+                type="submit"
+                className="w-full bg-white text-black py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all"
+              >
+                Send Message
+              </button>
+            </form>
+          </div>
         </div>
       </section>
     </div>

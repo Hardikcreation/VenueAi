@@ -52,13 +52,21 @@ export const authAPI = {
 };
 
 export const productAPI = {
-  getAll: (params = {}) => {
+  getAll: async (params = {}) => {
     const query = new URLSearchParams(params).toString();
-    return apiRequest(`/products${query ? `?${query}` : ''}`);
+    const response = await apiRequest(`/products${query ? `?${query}` : ''}`);
+    return Array.isArray(response) ? response : response.data || [];
   },
 
   getById: (id) =>
     apiRequest(`/products/${id}`),
+};
+
+export const searchAPI = {
+  searchVenues: (query) => {
+    const queryString = new URLSearchParams(query).toString();
+    return apiRequest(`/search${queryString ? `?${queryString}` : ''}`);
+  },
 };
 
 export const vendorAPI = {
@@ -77,15 +85,30 @@ export const vendorAPI = {
   getMyListings: () =>
     apiRequest('/vendor/my-listings'),
 
-  addProduct: (formData) =>
-    apiRequest('/vendor/products', {
+  addVenue: (data) =>
+    apiRequest('/vendor/venue', {
+      method: 'POST',
+      body: data instanceof FormData ? data : JSON.stringify(data),
+    }),
+
+  updateVenue: (data) =>
+    apiRequest('/vendor/my-venue', {
+      method: 'PUT',
+      body: data instanceof FormData ? data : JSON.stringify(data),
+    }),
+
+  uploadImages: (formData) =>
+    apiRequest('/vendor/images', {
       method: 'POST',
       body: formData,
     }),
 
-  updateVenue: (formData) =>
-    apiRequest('/vendor/my-venue', {
-      method: 'PUT',
+  getImages: () =>
+    apiRequest('/vendor/images'),
+
+  uploadVerificationDocument: (formData) =>
+    apiRequest('/vendor/verification', {
+      method: 'POST',
       body: formData,
     }),
 
@@ -113,6 +136,19 @@ export const adminAPI = {
 
   getAllVendors: () =>
     apiRequest('/admin/vendors'),
+
+  getVendorDetails: (vendorId) =>
+    apiRequest(`/admin/vendors/${vendorId}`),
+
+  approveVendor: (vendorId) =>
+    apiRequest(`/admin/vendors/${vendorId}/approve`, {
+      method: 'PATCH',
+    }),
+
+  rejectVendor: (vendorId) =>
+    apiRequest(`/admin/vendors/${vendorId}/reject`, {
+      method: 'DELETE',
+    }),
 
   updateProductStatus: (id, status) =>
     apiRequest(`/admin/products/${id}/status`, {
