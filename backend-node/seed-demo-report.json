@@ -1,0 +1,607 @@
+{
+  "seededAt": "2026-04-22T06:42:40.810Z",
+  "counts": {
+    "users": 10,
+    "vendors": 10,
+    "venues": 20,
+    "bookings": 20
+  },
+  "users": [
+    {
+      "userId": "69e86dd67acfd45f2ec31e4c",
+      "name": "Aarav Verma",
+      "email": "seed2026.user01@venueai.demo",
+      "password": "User@2026",
+      "role": "user"
+    },
+    {
+      "userId": "69e86dd77acfd45f2ec31e4d",
+      "name": "Vivaan Joshi",
+      "email": "seed2026.user02@venueai.demo",
+      "password": "User@2027",
+      "role": "user"
+    },
+    {
+      "userId": "69e86dd77acfd45f2ec31e4e",
+      "name": "Aditya Kapoor",
+      "email": "seed2026.user03@venueai.demo",
+      "password": "User@2028",
+      "role": "user"
+    },
+    {
+      "userId": "69e86dd77acfd45f2ec31e4f",
+      "name": "Krishna Mehta",
+      "email": "seed2026.user04@venueai.demo",
+      "password": "User@2029",
+      "role": "user"
+    },
+    {
+      "userId": "69e86dd87acfd45f2ec31e50",
+      "name": "Ishaan Rao",
+      "email": "seed2026.user05@venueai.demo",
+      "password": "User@2030",
+      "role": "user"
+    },
+    {
+      "userId": "69e86dd87acfd45f2ec31e51",
+      "name": "Anaya Singh",
+      "email": "seed2026.user06@venueai.demo",
+      "password": "User@2031",
+      "role": "user"
+    },
+    {
+      "userId": "69e86dd87acfd45f2ec31e52",
+      "name": "Diya Gupta",
+      "email": "seed2026.user07@venueai.demo",
+      "password": "User@2032",
+      "role": "user"
+    },
+    {
+      "userId": "69e86dd97acfd45f2ec31e53",
+      "name": "Meera Nair",
+      "email": "seed2026.user08@venueai.demo",
+      "password": "User@2033",
+      "role": "user"
+    },
+    {
+      "userId": "69e86dd97acfd45f2ec31e54",
+      "name": "Saanvi Sharma",
+      "email": "seed2026.user09@venueai.demo",
+      "password": "User@2034",
+      "role": "user"
+    },
+    {
+      "userId": "69e86dd97acfd45f2ec31e55",
+      "name": "Aadhya Patel",
+      "email": "seed2026.user10@venueai.demo",
+      "password": "User@2035",
+      "role": "user"
+    }
+  ],
+  "vendors": [
+    {
+      "userId": "69e86dd97acfd45f2ec31e56",
+      "vendorId": "69e86dda7acfd45f2ec31e57",
+      "ownerName": "Krishna Kapoor",
+      "businessName": "Bhopal Wedding Hall Collective",
+      "email": "seed2026.vendor01@venueai.demo",
+      "password": "Vendor@3030",
+      "phone": "9810000000",
+      "address": "MP Nagar, near DB Mall, Bhopal, Madhya Pradesh",
+      "category": "Wedding Hall",
+      "role": "vendor"
+    },
+    {
+      "userId": "69e86dda7acfd45f2ec31e5b",
+      "vendorId": "69e86dda7acfd45f2ec31e5c",
+      "ownerName": "Ishaan Mehta",
+      "businessName": "Bhopal Luxury Ballroom Collective",
+      "email": "seed2026.vendor02@venueai.demo",
+      "password": "Vendor@3031",
+      "phone": "9810000137",
+      "address": "Arera Colony, near 10 Number Market, Bhopal, Madhya Pradesh",
+      "category": "Luxury Ballroom",
+      "role": "vendor"
+    },
+    {
+      "userId": "69e86ddb7acfd45f2ec31e60",
+      "vendorId": "69e86ddb7acfd45f2ec31e61",
+      "ownerName": "Anaya Rao",
+      "businessName": "Bhopal Banquet Hall Collective",
+      "email": "seed2026.vendor03@venueai.demo",
+      "password": "Vendor@3032",
+      "phone": "9810000274",
+      "address": "Kolar Road, near DK Bridge, Bhopal, Madhya Pradesh",
+      "category": "Banquet Hall",
+      "role": "vendor"
+    },
+    {
+      "userId": "69e86ddb7acfd45f2ec31e65",
+      "vendorId": "69e86ddb7acfd45f2ec31e66",
+      "ownerName": "Diya Singh",
+      "businessName": "Bhopal Rooftop Venue Collective",
+      "email": "seed2026.vendor04@venueai.demo",
+      "password": "Vendor@3033",
+      "phone": "9810000411",
+      "address": "Hoshangabad Road, near Aashima Mall, Bhopal, Madhya Pradesh",
+      "category": "Rooftop Venue",
+      "role": "vendor"
+    },
+    {
+      "userId": "69e86ddc7acfd45f2ec31e6a",
+      "vendorId": "69e86ddc7acfd45f2ec31e6b",
+      "ownerName": "Meera Gupta",
+      "businessName": "Bhopal Resort Collective",
+      "email": "seed2026.vendor05@venueai.demo",
+      "password": "Vendor@3034",
+      "phone": "9810000548",
+      "address": "Lalghati, near VIP Road, Bhopal, Madhya Pradesh",
+      "category": "Resort",
+      "role": "vendor"
+    },
+    {
+      "userId": "69e86ddc7acfd45f2ec31e6f",
+      "vendorId": "69e86ddc7acfd45f2ec31e70",
+      "ownerName": "Saanvi Nair",
+      "businessName": "Bhopal Destination Venue Collective",
+      "email": "seed2026.vendor06@venueai.demo",
+      "password": "Vendor@3035",
+      "phone": "9810000685",
+      "address": "Bawadiya Kalan, near D Mart, Bhopal, Madhya Pradesh",
+      "category": "Destination Venue",
+      "role": "vendor"
+    },
+    {
+      "userId": "69e86ddd7acfd45f2ec31e74",
+      "vendorId": "69e86ddd7acfd45f2ec31e75",
+      "ownerName": "Aadhya Sharma",
+      "businessName": "Bhopal Farmhouse Collective",
+      "email": "seed2026.vendor07@venueai.demo",
+      "password": "Vendor@3036",
+      "phone": "9810000822",
+      "address": "Kohefiza, near Regional Science Centre, Bhopal, Madhya Pradesh",
+      "category": "Farmhouse",
+      "role": "vendor"
+    },
+    {
+      "userId": "69e86ddd7acfd45f2ec31e79",
+      "vendorId": "69e86ddd7acfd45f2ec31e7a",
+      "ownerName": "Aarav Patel",
+      "businessName": "Bhopal Garden Venue Collective",
+      "email": "seed2026.vendor08@venueai.demo",
+      "password": "Vendor@3037",
+      "phone": "9810000959",
+      "address": "Shahpura, near Shahpura Lake, Bhopal, Madhya Pradesh",
+      "category": "Garden Venue",
+      "role": "vendor"
+    },
+    {
+      "userId": "69e86dde7acfd45f2ec31e7e",
+      "vendorId": "69e86dde7acfd45f2ec31e7f",
+      "ownerName": "Vivaan Verma",
+      "businessName": "Bhopal Conference Hall Collective",
+      "email": "seed2026.vendor09@venueai.demo",
+      "password": "Vendor@3038",
+      "phone": "9810001096",
+      "address": "Chuna Bhatti, near Mata Mandir, Bhopal, Madhya Pradesh",
+      "category": "Conference Hall",
+      "role": "vendor"
+    },
+    {
+      "userId": "69e86dde7acfd45f2ec31e83",
+      "vendorId": "69e86ddf7acfd45f2ec31e84",
+      "ownerName": "Aditya Joshi",
+      "businessName": "Bhopal Corporate Event Space Collective",
+      "email": "seed2026.vendor10@venueai.demo",
+      "password": "Vendor@3039",
+      "phone": "9810001233",
+      "address": "Ayodhya Bypass, near People Mall, Bhopal, Madhya Pradesh",
+      "category": "Corporate Event Space",
+      "role": "vendor"
+    }
+  ],
+  "venues": [
+    {
+      "venueId": "69e86dda7acfd45f2ec31e59",
+      "vendorId": "69e86dda7acfd45f2ec31e57",
+      "vendorEmail": "seed2026.vendor01@venueai.demo",
+      "title": "Bhopal Wedding Courtyard",
+      "category": "Wedding Hall",
+      "location": "Arera Colony, Bhopal",
+      "price": 65000,
+      "capacity": 120,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86dda7acfd45f2ec31e5a",
+      "vendorId": "69e86dda7acfd45f2ec31e57",
+      "vendorEmail": "seed2026.vendor01@venueai.demo",
+      "title": "Terrace 27 Bhopal",
+      "category": "Rooftop Venue",
+      "location": "Kolar Road, Bhopal",
+      "price": 73500,
+      "capacity": 200,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86dda7acfd45f2ec31e5e",
+      "vendorId": "69e86dda7acfd45f2ec31e5c",
+      "vendorEmail": "seed2026.vendor02@venueai.demo",
+      "title": "Crystal Ballroom Bhopal",
+      "category": "Luxury Ballroom",
+      "location": "Hoshangabad Road, Bhopal",
+      "price": 82000,
+      "capacity": 290,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86dda7acfd45f2ec31e5f",
+      "vendorId": "69e86dda7acfd45f2ec31e5c",
+      "vendorEmail": "seed2026.vendor02@venueai.demo",
+      "title": "Milestone Destination Venue",
+      "category": "Destination Venue",
+      "location": "Lalghati, Bhopal",
+      "price": 90500,
+      "capacity": 370,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86ddb7acfd45f2ec31e63",
+      "vendorId": "69e86ddb7acfd45f2ec31e61",
+      "vendorEmail": "seed2026.vendor03@venueai.demo",
+      "title": "Bhopal Banquet Square 2",
+      "category": "Banquet Hall",
+      "location": "Bawadiya Kalan, Bhopal",
+      "price": 99000,
+      "capacity": 460,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86ddb7acfd45f2ec31e64",
+      "vendorId": "69e86ddb7acfd45f2ec31e61",
+      "vendorEmail": "seed2026.vendor03@venueai.demo",
+      "title": "Gauri Greens 2",
+      "category": "Garden Venue",
+      "location": "Kohefiza, Bhopal",
+      "price": 107500,
+      "capacity": 140,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86ddb7acfd45f2ec31e68",
+      "vendorId": "69e86ddb7acfd45f2ec31e66",
+      "vendorEmail": "seed2026.vendor04@venueai.demo",
+      "title": "Open Sky Rooftop Venue 2",
+      "category": "Rooftop Venue",
+      "location": "Shahpura, Bhopal",
+      "price": 116000,
+      "capacity": 230,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86ddc7acfd45f2ec31e69",
+      "vendorId": "69e86ddb7acfd45f2ec31e66",
+      "vendorEmail": "seed2026.vendor04@venueai.demo",
+      "title": "Convention Hub Bhopal 2",
+      "category": "Corporate Event Space",
+      "location": "Chuna Bhatti, Bhopal",
+      "price": 124500,
+      "capacity": 310,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86ddc7acfd45f2ec31e6d",
+      "vendorId": "69e86ddc7acfd45f2ec31e6b",
+      "vendorEmail": "seed2026.vendor05@venueai.demo",
+      "title": "Lake Breeze Resort Bhopal 3",
+      "category": "Resort",
+      "location": "Ayodhya Bypass, Bhopal",
+      "price": 133000,
+      "capacity": 400,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86ddc7acfd45f2ec31e6e",
+      "vendorId": "69e86ddc7acfd45f2ec31e6b",
+      "vendorEmail": "seed2026.vendor05@venueai.demo",
+      "title": "Imperial Ballroom Bhopal 3",
+      "category": "Luxury Ballroom",
+      "location": "MP Nagar, Bhopal",
+      "price": 141500,
+      "capacity": 480,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86ddc7acfd45f2ec31e72",
+      "vendorId": "69e86ddc7acfd45f2ec31e70",
+      "vendorEmail": "seed2026.vendor06@venueai.demo",
+      "title": "The Occasion Estate 3",
+      "category": "Destination Venue",
+      "location": "Arera Colony, Bhopal",
+      "price": 150000,
+      "capacity": 170,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86ddd7acfd45f2ec31e73",
+      "vendorId": "69e86ddc7acfd45f2ec31e70",
+      "vendorEmail": "seed2026.vendor06@venueai.demo",
+      "title": "Sunset Deck Bhopal 3",
+      "category": "Rooftop Venue",
+      "location": "Kolar Road, Bhopal",
+      "price": 158500,
+      "capacity": 250,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86ddd7acfd45f2ec31e77",
+      "vendorId": "69e86ddd7acfd45f2ec31e75",
+      "vendorEmail": "seed2026.vendor07@venueai.demo",
+      "title": "Bhopal Farmhouse Retreat 4",
+      "category": "Farmhouse",
+      "location": "Hoshangabad Road, Bhopal",
+      "price": 167000,
+      "capacity": 340,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86ddd7acfd45f2ec31e78",
+      "vendorId": "69e86ddd7acfd45f2ec31e75",
+      "vendorEmail": "seed2026.vendor07@venueai.demo",
+      "title": "Grand Arrival Venue 4",
+      "category": "Destination Venue",
+      "location": "Lalghati, Bhopal",
+      "price": 175500,
+      "capacity": 420,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86dde7acfd45f2ec31e7c",
+      "vendorId": "69e86ddd7acfd45f2ec31e7a",
+      "vendorEmail": "seed2026.vendor08@venueai.demo",
+      "title": "Royal Palace Marriage Garden 3",
+      "category": "Garden Venue",
+      "location": "Bawadiya Kalan, Bhopal",
+      "price": 184000,
+      "capacity": 510,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86dde7acfd45f2ec31e7d",
+      "vendorId": "69e86ddd7acfd45f2ec31e7a",
+      "vendorEmail": "seed2026.vendor08@venueai.demo",
+      "title": "Gauri Greens 4",
+      "category": "Garden Venue",
+      "location": "Kohefiza, Bhopal",
+      "price": 192500,
+      "capacity": 190,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86dde7acfd45f2ec31e81",
+      "vendorId": "69e86dde7acfd45f2ec31e7f",
+      "vendorEmail": "seed2026.vendor09@venueai.demo",
+      "title": "Bhopal Conference Center 5",
+      "category": "Conference Hall",
+      "location": "Shahpura, Bhopal",
+      "price": 201000,
+      "capacity": 280,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86dde7acfd45f2ec31e82",
+      "vendorId": "69e86dde7acfd45f2ec31e7f",
+      "vendorEmail": "seed2026.vendor09@venueai.demo",
+      "title": "LaunchPad Event Space 5",
+      "category": "Corporate Event Space",
+      "location": "Chuna Bhatti, Bhopal",
+      "price": 209500,
+      "capacity": 360,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86ddf7acfd45f2ec31e86",
+      "vendorId": "69e86ddf7acfd45f2ec31e84",
+      "vendorEmail": "seed2026.vendor10@venueai.demo",
+      "title": "Boardroom Events Bhopal 5",
+      "category": "Corporate Event Space",
+      "location": "Ayodhya Bypass, Bhopal",
+      "price": 218000,
+      "capacity": 450,
+      "status": "approved"
+    },
+    {
+      "venueId": "69e86ddf7acfd45f2ec31e87",
+      "vendorId": "69e86ddf7acfd45f2ec31e84",
+      "vendorEmail": "seed2026.vendor10@venueai.demo",
+      "title": "Royal Orchid Ballroom 5",
+      "category": "Luxury Ballroom",
+      "location": "MP Nagar, Bhopal",
+      "price": 226500,
+      "capacity": 530,
+      "status": "approved"
+    }
+  ],
+  "bookings": [
+    {
+      "bookingId": "69e86ddf7acfd45f2ec31e88",
+      "userId": "69e86dd67acfd45f2ec31e4c",
+      "venueId": "69e86dda7acfd45f2ec31e59",
+      "eventDate": "2026-02-05T00:00:00.000Z",
+      "status": "pending",
+      "paymentMethod": "on_visit",
+      "paymentStatus": "pending"
+    },
+    {
+      "bookingId": "69e86ddf7acfd45f2ec31e89",
+      "userId": "69e86dd77acfd45f2ec31e4d",
+      "venueId": "69e86dda7acfd45f2ec31e5a",
+      "eventDate": "2026-02-06T00:00:00.000Z",
+      "status": "accepted",
+      "paymentMethod": "upi",
+      "paymentStatus": "pending"
+    },
+    {
+      "bookingId": "69e86ddf7acfd45f2ec31e8a",
+      "userId": "69e86dd77acfd45f2ec31e4e",
+      "venueId": "69e86dda7acfd45f2ec31e5e",
+      "eventDate": "2026-02-07T00:00:00.000Z",
+      "status": "completed",
+      "paymentMethod": "card",
+      "paymentStatus": "paid"
+    },
+    {
+      "bookingId": "69e86ddf7acfd45f2ec31e8b",
+      "userId": "69e86dd77acfd45f2ec31e4f",
+      "venueId": "69e86dda7acfd45f2ec31e5f",
+      "eventDate": "2026-02-08T00:00:00.000Z",
+      "status": "rejected",
+      "paymentMethod": "cash",
+      "paymentStatus": "failed"
+    },
+    {
+      "bookingId": "69e86ddf7acfd45f2ec31e8c",
+      "userId": "69e86dd87acfd45f2ec31e50",
+      "venueId": "69e86ddb7acfd45f2ec31e63",
+      "eventDate": "2026-02-09T00:00:00.000Z",
+      "status": "pending",
+      "paymentMethod": "on_visit",
+      "paymentStatus": "pending"
+    },
+    {
+      "bookingId": "69e86ddf7acfd45f2ec31e8d",
+      "userId": "69e86dd87acfd45f2ec31e51",
+      "venueId": "69e86ddb7acfd45f2ec31e64",
+      "eventDate": "2026-03-10T00:00:00.000Z",
+      "status": "accepted",
+      "paymentMethod": "upi",
+      "paymentStatus": "pending"
+    },
+    {
+      "bookingId": "69e86ddf7acfd45f2ec31e8e",
+      "userId": "69e86dd87acfd45f2ec31e52",
+      "venueId": "69e86ddb7acfd45f2ec31e68",
+      "eventDate": "2026-03-11T00:00:00.000Z",
+      "status": "completed",
+      "paymentMethod": "card",
+      "paymentStatus": "paid"
+    },
+    {
+      "bookingId": "69e86ddf7acfd45f2ec31e8f",
+      "userId": "69e86dd97acfd45f2ec31e53",
+      "venueId": "69e86ddc7acfd45f2ec31e69",
+      "eventDate": "2026-03-12T00:00:00.000Z",
+      "status": "rejected",
+      "paymentMethod": "cash",
+      "paymentStatus": "failed"
+    },
+    {
+      "bookingId": "69e86ddf7acfd45f2ec31e90",
+      "userId": "69e86dd97acfd45f2ec31e54",
+      "venueId": "69e86ddc7acfd45f2ec31e6d",
+      "eventDate": "2026-03-13T00:00:00.000Z",
+      "status": "pending",
+      "paymentMethod": "on_visit",
+      "paymentStatus": "pending"
+    },
+    {
+      "bookingId": "69e86ddf7acfd45f2ec31e91",
+      "userId": "69e86dd97acfd45f2ec31e55",
+      "venueId": "69e86ddc7acfd45f2ec31e6e",
+      "eventDate": "2026-03-14T00:00:00.000Z",
+      "status": "accepted",
+      "paymentMethod": "upi",
+      "paymentStatus": "pending"
+    },
+    {
+      "bookingId": "69e86de07acfd45f2ec31e92",
+      "userId": "69e86dd67acfd45f2ec31e4c",
+      "venueId": "69e86ddc7acfd45f2ec31e72",
+      "eventDate": "2026-04-15T00:00:00.000Z",
+      "status": "completed",
+      "paymentMethod": "card",
+      "paymentStatus": "paid"
+    },
+    {
+      "bookingId": "69e86de07acfd45f2ec31e93",
+      "userId": "69e86dd77acfd45f2ec31e4d",
+      "venueId": "69e86ddd7acfd45f2ec31e73",
+      "eventDate": "2026-04-16T00:00:00.000Z",
+      "status": "rejected",
+      "paymentMethod": "cash",
+      "paymentStatus": "failed"
+    },
+    {
+      "bookingId": "69e86de07acfd45f2ec31e94",
+      "userId": "69e86dd77acfd45f2ec31e4e",
+      "venueId": "69e86ddd7acfd45f2ec31e77",
+      "eventDate": "2026-04-17T00:00:00.000Z",
+      "status": "pending",
+      "paymentMethod": "on_visit",
+      "paymentStatus": "pending"
+    },
+    {
+      "bookingId": "69e86de07acfd45f2ec31e95",
+      "userId": "69e86dd77acfd45f2ec31e4f",
+      "venueId": "69e86ddd7acfd45f2ec31e78",
+      "eventDate": "2026-04-18T00:00:00.000Z",
+      "status": "accepted",
+      "paymentMethod": "upi",
+      "paymentStatus": "pending"
+    },
+    {
+      "bookingId": "69e86de07acfd45f2ec31e96",
+      "userId": "69e86dd87acfd45f2ec31e50",
+      "venueId": "69e86dde7acfd45f2ec31e7c",
+      "eventDate": "2026-04-19T00:00:00.000Z",
+      "status": "completed",
+      "paymentMethod": "card",
+      "paymentStatus": "paid"
+    },
+    {
+      "bookingId": "69e86de07acfd45f2ec31e97",
+      "userId": "69e86dd87acfd45f2ec31e51",
+      "venueId": "69e86dde7acfd45f2ec31e7d",
+      "eventDate": "2026-05-20T00:00:00.000Z",
+      "status": "rejected",
+      "paymentMethod": "cash",
+      "paymentStatus": "failed"
+    },
+    {
+      "bookingId": "69e86de07acfd45f2ec31e98",
+      "userId": "69e86dd87acfd45f2ec31e52",
+      "venueId": "69e86dde7acfd45f2ec31e81",
+      "eventDate": "2026-05-21T00:00:00.000Z",
+      "status": "pending",
+      "paymentMethod": "on_visit",
+      "paymentStatus": "pending"
+    },
+    {
+      "bookingId": "69e86de07acfd45f2ec31e99",
+      "userId": "69e86dd97acfd45f2ec31e53",
+      "venueId": "69e86dde7acfd45f2ec31e82",
+      "eventDate": "2026-05-22T00:00:00.000Z",
+      "status": "accepted",
+      "paymentMethod": "upi",
+      "paymentStatus": "pending"
+    },
+    {
+      "bookingId": "69e86de07acfd45f2ec31e9a",
+      "userId": "69e86dd97acfd45f2ec31e54",
+      "venueId": "69e86ddf7acfd45f2ec31e86",
+      "eventDate": "2026-05-23T00:00:00.000Z",
+      "status": "completed",
+      "paymentMethod": "card",
+      "paymentStatus": "paid"
+    },
+    {
+      "bookingId": "69e86de07acfd45f2ec31e9b",
+      "userId": "69e86dd97acfd45f2ec31e55",
+      "venueId": "69e86ddf7acfd45f2ec31e87",
+      "eventDate": "2026-05-24T00:00:00.000Z",
+      "status": "rejected",
+      "paymentMethod": "cash",
+      "paymentStatus": "failed"
+    }
+  ]
+}

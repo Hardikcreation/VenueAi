@@ -69,7 +69,7 @@ const ImageUploadForm = ({ refresh }) => {
                     />
                     <label htmlFor="image-input" className="cursor-pointer">
                         <p className="text-gray-600">Click to select images or drag and drop</p>
-                        <p className="text-sm text-gray-500">Supported formats: JPG, PNG, WebP</p>
+                        <p className="text-sm text-gray-500">All image formats are allowed</p>
                     </label>
                 </div>
 

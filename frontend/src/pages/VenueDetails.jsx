@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, CheckCircle2, Clock3, ImageIcon, IndianRupee, MapPin, Users } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ImageIcon, IndianRupee, MapPin, Users } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -7,7 +7,6 @@ import { bookingAPI, productAPI } from '../services/api';
 import { getErrorMessage } from '../utils/errors';
 import { getVenueImage, getVenueLocationLabel, toVenueImageUrl } from '../utils/venues';
 
-const TIME_SLOTS = ['10:00:00', '13:00:00', '16:00:00', '19:00:00'];
 const OCCASIONS = ['Wedding', 'Reception', 'Birthday', 'Corporate Event', 'Engagement', 'Other'];
 
 const toCurrency = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
@@ -42,7 +41,6 @@ const VenueDetails = () => {
     booking_email: user?.email || '',
     booking_phone: '',
     event_date: '',
-    event_time: '',
     guest_count: '',
     occasion_type: 'Wedding',
     payment_method: 'on_visit',
@@ -96,19 +94,13 @@ const VenueDetails = () => {
     return [...new Set(images)];
   }, [venue]);
 
-  const blockedTimesForSelectedDate = useMemo(() => {
-    if (!bookingForm.event_date) return [];
+  const isDateBooked = useMemo(() => {
+    if (!bookingForm.event_date) return false;
 
     return availability
       .filter((slot) => slot.event_date?.slice(0, 10) === bookingForm.event_date)
-      .map((slot) => slot.event_time)
-      .filter(Boolean);
+      .length > 0;
   }, [availability, bookingForm.event_date]);
-
-  const isDateFullyBooked = useMemo(
-    () => blockedTimesForSelectedDate.length >= TIME_SLOTS.length,
-    [blockedTimesForSelectedDate]
-  );
 
   const bookingHighlights = useMemo(() => {
     if (!venue) return [];
@@ -126,7 +118,6 @@ const VenueDetails = () => {
     setBookingForm((current) => ({
       ...current,
       [name]: value,
-      ...(name === 'event_date' ? { event_time: '' } : {}),
     }));
     setSuccessMessage('');
   };
@@ -154,8 +145,8 @@ const VenueDetails = () => {
       return;
     }
 
-    if (!bookingForm.event_time) {
-      setError('Please choose an available time slot.');
+    if (isDateBooked) {
+      setError('This date is already booked. Please choose another date.');
       return;
     }
 
@@ -174,7 +165,7 @@ const VenueDetails = () => {
       setAvailability(Array.isArray(updatedAvailability?.blockedSlots) ? updatedAvailability.blockedSlots : []);
       setBookingForm((current) => ({
         ...current,
-        event_time: '',
+        event_date: '',
         message: '',
       }));
     } catch (err) {
@@ -294,7 +285,7 @@ const VenueDetails = () => {
             </div>
 
             <div className="mt-6 bg-white/5 rounded-2xl p-4 border border-white/10">
-              <h3 className="font-semibold mb-3">Booked Slots</h3>
+              <h3 className="font-semibold mb-3">Booked Dates</h3>
               {availability.length === 0 ? (
                 <p className="text-sm text-gray-400">No blocked dates yet. This venue is currently open for fresh booking requests.</p>
               ) : (
@@ -314,10 +305,10 @@ const VenueDetails = () => {
             <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
               <div>
                 <h2 className="text-2xl font-bold">Check Availability & Book</h2>
-                <p className="text-gray-400 mt-2">Choose your date, see available slots, and send a booking request to the venue owner.</p>
+                <p className="text-gray-400 mt-2">Choose your date and send a booking request to the venue owner.</p>
               </div>
               <div className="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm text-gray-300">
-                {availability.length} blocked slot{availability.length === 1 ? '' : 's'}
+                {availability.length} blocked date{availability.length === 1 ? '' : 's'}
               </div>
             </div>
 
@@ -408,45 +399,11 @@ const VenueDetails = () => {
                 </label>
               </div>
 
-              <div>
-                <span className="text-sm text-gray-400 mb-2 block">Available Time Slots</span>
-                {!bookingForm.event_date ? (
-                  <p className="text-sm text-gray-500">Choose a date to see the open time slots.</p>
-                ) : isDateFullyBooked ? (
-                  <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                    This date is fully booked. Please pick another date.
-                  </div>
-                ) : (
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    {TIME_SLOTS.map((slot) => {
-                      const blocked = blockedTimesForSelectedDate.includes(slot);
-                      const selected = bookingForm.event_time === slot;
-
-                      return (
-                        <button
-                          key={slot}
-                          type="button"
-                          disabled={blocked}
-                          onClick={() => setBookingForm((current) => ({ ...current, event_time: slot }))}
-                          className={`rounded-2xl border px-4 py-3 text-left transition-all ${
-                            blocked
-                              ? 'border-white/5 bg-white/5 text-gray-600 cursor-not-allowed'
-                              : selected
-                                ? 'border-white bg-white text-black'
-                                : 'border-white/10 bg-white/5 hover:border-white/30'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 text-sm font-medium">
-                            <Clock3 className="w-4 h-4" />
-                            <span>{slot.slice(0, 5)}</span>
-                          </div>
-                          <p className="text-xs mt-1 opacity-80">{blocked ? 'Already booked' : 'Available'}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              {bookingForm.event_date && isDateBooked && (
+                <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                  This date is already booked. Please pick another date.
+                </div>
+              )}
 
               <label className="block">
                 <span className="text-sm text-gray-400 mb-2 block">Payment Method</span>
@@ -495,7 +452,7 @@ const VenueDetails = () => {
 
               <button
                 type="submit"
-                disabled={submitting || isDateFullyBooked}
+                disabled={submitting || isDateBooked}
                 className="w-full bg-white text-black py-3 rounded-2xl font-semibold hover:bg-gray-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {submitting ? 'Sending Booking Request...' : 'Book This Venue'}
