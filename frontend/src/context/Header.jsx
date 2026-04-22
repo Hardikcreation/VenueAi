@@ -23,7 +23,6 @@ const Header = () => {
     setIsMenuOpen(false);
   };
 
-  // 🔥 Debounced Suggestions Fetch
   useEffect(() => {
     if (!search.trim()) {
       setSuggestions([]);
@@ -36,7 +35,7 @@ const Header = () => {
         setSuggestions(normalizeVenueResults(res));
       } catch (err) {
         console.error(err);
-        showToast(getErrorMessage(err, 'Search suggestions are unavailable right now.'), 'error');
+        showToast(getErrorMessage(err, 'Search unavailable'), 'error');
       }
     }, 300);
 
@@ -60,49 +59,46 @@ const Header = () => {
   ].filter((link) => link.show);
 
   return (
-    <header className="bg-black/80 backdrop-blur-xl border-b border-white/10 sticky top-0 z-50">
-      <div className="px-4 md:px-8 lg:px-16 py-4 flex items-center justify-between max-w-7xl mx-auto">
+    <header className="bg-[#23113F]/90 backdrop-blur-xl border-b border-[#7C3AED]/20 sticky top-0 z-50">
+      <div className="px-4 md:px-8 lg:px-16 py-3 flex items-center justify-between max-w-7xl mx-auto">
 
         {/* Logo */}
-        <Link to="/" className="text-white text-2xl font-bold">
-          Venue <span className="text-purple-400">AI</span>
+        <Link to="/" className="text-[#F8F5FF] text-xl md:text-2xl font-bold">
+          Venue <span className="text-[#7C3AED]">AI</span>
         </Link>
 
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-8">
+        {/* Desktop */}
+        <nav className="hidden md:flex items-center gap-6 lg:gap-8">
+
           {navLinks.map((link) => (
-            <Link key={link.to} to={link.to} className="text-gray-300 hover:text-white">
+            <Link key={link.to} to={link.to} className="text-[#F8F5FF]/70 hover:text-[#F8F5FF] text-sm">
               {link.label}
             </Link>
           ))}
 
-          {/* 🔍 SEARCH */}
-          <div className="relative w-80">
+          {/* Search */}
+          <div className="relative w-64 lg:w-80">
+            <Search className="absolute left-3 top-2.5 text-[#F8F5FF]/60" size={16} />
 
             <input
               type="text"
               placeholder="Search venues..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSelect(search);
-                }
-              }}
-              className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white"
+              onKeyDown={(e) => e.key === 'Enter' && handleSelect(search)}
+              className="w-full pl-9 pr-3 py-2 bg-[#7C3AED]/10 border border-[#7C3AED]/20 rounded-xl text-[#F8F5FF] text-sm focus:outline-none focus:border-[#7C3AED]/40"
             />
 
-            {/* 🔥 Suggestions Dropdown */}
             {suggestions.length > 0 && (
-              <div className="absolute top-12 w-full bg-[#111] border border-white/10 rounded-xl shadow-xl overflow-hidden z-50">
+              <div className="absolute top-11 w-full bg-[#23113F] border border-[#7C3AED]/20 rounded-xl shadow-xl overflow-hidden z-50">
                 {suggestions.map((item) => (
                   <div
                     key={item._id || item.id}
                     onClick={() => handleSelect(item.title || item.name)}
-                    className="px-4 py-3 hover:bg-white/10 cursor-pointer border-b border-white/5"
+                    className="px-4 py-2 hover:bg-[#7C3AED]/10 cursor-pointer"
                   >
-                    <p className="text-sm text-white">{item.title || item.name}</p>
-                    <p className="text-xs text-gray-400">{item.category}</p>
+                    <p className="text-sm text-[#F8F5FF]">{item.title || item.name}</p>
+                    <p className="text-xs text-[#F8F5FF]/60">{item.category}</p>
                   </div>
                 ))}
               </div>
@@ -112,50 +108,91 @@ const Header = () => {
           {/* User */}
           {user ? (
             <>
-              <span className="text-gray-400 text-sm">{user.name}</span>
-              <button onClick={handleLogout}>
-                <LogOut />
+              <span className="text-[#F8F5FF]/70 text-sm">{user.name}</span>
+              <button onClick={handleLogout} className="text-[#F8F5FF]">
+                <LogOut size={18} />
               </button>
             </>
           ) : (
-            <Link to="/login" className="bg-white text-black px-4 py-2 rounded">
+            <Link to="/login" className="bg-[#7C3AED] text-white px-3 py-1.5 rounded-lg text-sm hover:bg-[#6D28D9] transition-colors">
               Login
             </Link>
           )}
         </nav>
 
-        {/* Mobile Menu */}
-        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden text-white">
-          {isMenuOpen ? <X /> : <Menu />}
-        </button>
+        {/* Mobile Right Icons */}
+        <div className="flex items-center gap-3 md:hidden">
+
+          {/* Search Icon */}
+          <button
+            onClick={() => setIsMenuOpen(true)}
+            className="text-[#F8F5FF]"
+          >
+            <Search />
+          </button>
+
+          {/* Menu */}
+          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-[#F8F5FF]">
+            {isMenuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
       </div>
 
+      {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden border-t border-white/10 px-4 pb-4">
+        <div className="md:hidden border-t border-[#7C3AED]/20 px-4 pb-4 bg-[#23113F]">
+
+          {/* Mobile Search */}
+          <div className="relative mt-4">
+            <input
+              type="text"
+              placeholder="Search venues..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full px-4 py-2 bg-[#7C3AED]/10 border border-[#7C3AED]/20 rounded-xl text-[#F8F5FF]"
+            />
+
+            {suggestions.length > 0 && (
+              <div className="mt-2 bg-[#23113F] border border-[#7C3AED]/20 rounded-xl overflow-hidden">
+                {suggestions.map((item) => (
+                  <div
+                    key={item._id || item.id}
+                    onClick={() => handleSelect(item.title || item.name)}
+                    className="px-4 py-2 hover:bg-[#7C3AED]/10 cursor-pointer"
+                  >
+                    <p className="text-sm text-[#F8F5FF]">{item.title || item.name}</p>
+                    <p className="text-xs text-[#F8F5FF]/60">{item.category}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Links */}
           <nav className="flex flex-col gap-3 pt-4">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
                 onClick={() => setIsMenuOpen(false)}
-                className="text-gray-300 hover:text-white"
+                className="text-[#F8F5FF]/70 hover:text-[#F8F5FF]"
               >
                 {link.label}
               </Link>
             ))}
+
             {!user ? (
               <Link
                 to="/login"
                 onClick={() => setIsMenuOpen(false)}
-                className="bg-white text-black px-4 py-2 rounded-xl font-medium text-center"
+                className="bg-[#7C3AED] text-white px-4 py-2 rounded-xl text-center hover:bg-[#6D28D9] transition-colors"
               >
                 Login
               </Link>
             ) : (
               <button
-                type="button"
                 onClick={handleLogout}
-                className="rounded-xl border border-white/10 px-4 py-2 text-left text-gray-300 hover:text-white"
+                className="border border-[#7C3AED]/20 px-4 py-2 rounded-xl text-left text-[#F8F5FF]/70 hover:bg-[#7C3AED]/10 transition-colors"
               >
                 Logout
               </button>

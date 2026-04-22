@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { bookingAPI } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { getErrorMessage } from '../utils/errors';
+import MarketplaceBottomNav from '../components/MarketplaceBottomNav';
 
 const statusStyles = {
   pending: 'bg-[#FEF9C3] text-[#854D0E]',
@@ -40,11 +41,11 @@ const UserBookings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F7F4]">
-      <div className="bg-[#1C1917] text-white py-12">
+    <div className="min-h-screen bg-[#F8F5FF] pb-28">
+      <div className="bg-gradient-to-br from-[#2A104F] via-[#5B21B6] to-[#9333EA] py-12 text-white">
         <div className="px-6 md:px-12 lg:px-24">
           <h1 className="font-heading text-4xl tracking-tight mb-2">My Booking Requests</h1>
-          <p className="text-stone-300">Track the status of every venue request you have sent.</p>
+          <p className="text-white/75">Track the status of every venue request you have sent.</p>
         </div>
       </div>
 
@@ -55,13 +56,13 @@ const UserBookings = () => {
           </div>
         )}
         {bookings.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-stone-200 p-8 text-center text-[#57534E]">
+          <div className="bg-white rounded-2xl border border-[#EEE7FF] p-8 text-center text-[#57534E] shadow-[0_18px_45px_rgba(109,40,217,0.08)]">
             You have not sent any booking requests yet.
           </div>
         ) : (
           <div className="grid gap-6">
             {bookings.map((booking) => (
-              <div key={booking.id} className="bg-white rounded-2xl border border-stone-200 p-6">
+              <div key={booking.id} className="bg-white rounded-[28px] border border-[#EEE7FF] p-6 shadow-[0_18px_45px_rgba(109,40,217,0.08)]">
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div>
                     <h2 className="font-heading text-2xl">{booking.title}</h2>
@@ -101,6 +102,7 @@ const UserBookings = () => {
           </div>
         )}
       </div>
+      <MarketplaceBottomNav />
     </div>
   );
 };

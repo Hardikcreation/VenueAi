@@ -154,6 +154,14 @@ const featureOptions = [
   ['Luxury Rooms', 'In-house Decor', 'Sound System', 'Security Staff'],
 ];
 
+const tagOptions = ['Pure Veg', 'Most Loved', 'Family Favorite', 'Premium', 'Quick Booking'];
+const comboTemplates = [
+  ['Venue + Catering + DJ', 'Wedding Combo'],
+  ['Decor + Photography + Cake', 'Birthday Package'],
+  ['Venue + Decor', 'Celebration Pack'],
+  ['Catering + Decor + Lights', 'Event Combo'],
+];
+
 const loremBits = [
   'crafted for elegant celebrations',
   'popular for premium family events',
@@ -230,6 +238,12 @@ const buildVenueSeed = (vendorDoc, vendorSeed, venueIndex) => {
   const features = featureOptions[venueIndex % featureOptions.length];
   const slug = createSlug(`${vendorSeed.businessName}-${title}-${venueIndex + 1}`);
   const imageSet = getVenueImageSet(venueIndex);
+  const isComboPackage = venueIndex % 5 === 0 || venueIndex % 7 === 0;
+  const comboTemplate = comboTemplates[venueIndex % comboTemplates.length];
+  const rating = Number((4.2 + ((venueIndex % 6) * 0.1)).toFixed(1));
+  const reviewCount = 90 + venueIndex * 18;
+  const budgetTier = price <= 90000 ? 'budget' : price <= 160000 ? 'mid' : 'premium';
+  const priceUnit = category === 'Garden Venue' || category === 'Banquet Hall' ? 'Starting Price' : 'Per Event';
 
   return {
     vendor_id: vendorDoc._id,
@@ -239,17 +253,36 @@ const buildVenueSeed = (vendorDoc, vendorSeed, venueIndex) => {
     gallery_images: imageSet.gallery,
     video_url: `https://example.com/showcase/${slug}`,
     location: `${location.zone}, ${location.city}`,
+    city: location.city,
     category,
+    listing_type: 'venue',
     zone: location.zone,
     landmark: location.landmark,
+    service_area: `${location.zone}, ${location.city}`,
     latitude: 22.5 + venueIndex * 0.07,
     longitude: 75.8 + venueIndex * 0.05,
     street_view_image: imageSet.street,
     occasion_types: occasionTypes,
+    occasion_focus: occasionTypes,
     features,
+    combo_items: isComboPackage ? comboTemplate[0].split(' + ') : [],
     capacity,
     price,
     base_price: price,
+    price_unit: priceUnit,
+    tag_label: tagOptions[venueIndex % tagOptions.length],
+    pure_veg: venueIndex % 2 === 0,
+    rating,
+    review_count: reviewCount,
+    budget_tier: budgetTier,
+    premium_pick: budgetTier === 'premium' || rating >= 4.6,
+    available_today: venueIndex % 3 !== 0,
+    combo_package: isComboPackage,
+    combo_name: isComboPackage ? comboTemplate[1] : '',
+    combo_discount_price: isComboPackage ? Math.round(price * 0.86) : 0,
+    combo_original_price: isComboPackage ? Math.round(price * 1.08) : 0,
+    trending_score: 60 + venueIndex * 3,
+    recommended_score: 70 + venueIndex * 2,
     status: 'approved',
   };
 };
@@ -399,6 +432,15 @@ async function seedDemoData() {
       vendorEmail: vendor?.email || '',
       title: venue.title,
       category: venue.category,
+      rating: venue.rating,
+      reviewCount: venue.review_count,
+      priceUnit: venue.price_unit,
+      tagLabel: venue.tag_label,
+      budgetTier: venue.budget_tier,
+      premiumPick: venue.premium_pick,
+      availableToday: venue.available_today,
+      comboPackage: venue.combo_package,
+      comboName: venue.combo_name,
       location: venue.location,
       price: venue.price,
       capacity: venue.capacity,

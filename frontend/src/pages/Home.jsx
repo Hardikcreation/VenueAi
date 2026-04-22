@@ -1,502 +1,540 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, MapPinned, SlidersHorizontal, Search, MapPin, Sparkles, Clock, Users, Star, TrendingUp, Filter, X, ChevronRight, Heart, Share2, Navigation, Mail, Phone, MessageSquare, Quote, ArrowRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { bookingAPI, productAPI } from '../services/api';
-import { getVenueImage, getVenueLocationLabel, matchesVenueSearch } from '../utils/venues';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronRight, Heart, MapPin, ShieldCheck } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import MarketplaceBottomNav from '../components/MarketplaceBottomNav';
+import { productAPI } from '../services/api';
+import { getVenueImage, getVenueLocationLabel, matchesVenueSearch, toVenueImageUrl } from '../utils/venues';
 
-const CATEGORIES = ['Gardens', 'Farmhouses', 'Resorts', 'Banquet Halls', 'Lawns'];
-const TIME_SLOTS = ['10:00:00', '13:00:00', '16:00:00', '19:00:00'];
-
-const BHOPAL_BOUNDS = {
-  minLat: 23.16, maxLat: 23.25,
-  minLng: 77.36, maxLng: 77.48
-};
-
-const LANDMARKS = [
-  { label: 'Upper Lake', lat: 23.2366, lng: 77.3818 },
-  { label: 'DB Mall', lat: 23.2333, lng: 77.4346 },
-  { label: 'Aura Mall', lat: 23.1819, lng: 77.4625 },
-  { label: 'E-7 Market', lat: 23.2202, lng: 77.4328 },
-  { label: 'Van Vihar', lat: 23.2347, lng: 77.3779 },
+const QUICK_CATEGORIES = [
+  { label: 'Venues', image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=320&q=80', tone: 'from-[#EEE7FF] to-[#DDD6FE]' },
+  { label: 'Catering', image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=320&q=80', tone: 'from-[#FFF1E7] to-[#FED7AA]' },
+  { label: 'Photography', image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=320&q=80', tone: 'from-[#FFE4EF] to-[#FDA4AF]' },
+  { label: 'DJs', image: 'https://images.unsplash.com/photo-1571266028243-d220c9d2f8bf?auto=format&fit=crop&w=320&q=80', tone: 'from-[#E6F7FF] to-[#93C5FD]' },
+  { label: 'Decor', image: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=320&q=80', tone: 'from-[#EAFBF0] to-[#86EFAC]' },
+  { label: 'Makeup', image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=320&q=80', tone: 'from-[#FFF4D6] to-[#FDE68A]' },
+  { label: 'Travel', image: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=320&q=80', tone: 'from-[#E8F0FF] to-[#C4B5FD]' },
+  { label: 'More', image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=320&q=80', tone: 'from-[#F3F4F6] to-[#D1D5DB]' },
 ];
 
-const toMapPoint = (lat, lng) => ({
-  x: ((lng - BHOPAL_BOUNDS.minLng) / (BHOPAL_BOUNDS.maxLng - BHOPAL_BOUNDS.minLng)) * 100,
-  y: ((BHOPAL_BOUNDS.maxLat - lat) / (BHOPAL_BOUNDS.maxLat - BHOPAL_BOUNDS.minLat)) * 100,
-});
+const OCCASIONS = [
+  { label: 'Wedding', image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=900&q=80' },
+  { label: 'Birthday', image: 'https://images.unsplash.com/photo-1464349153735-7db50ed83c84?auto=format&fit=crop&w=900&q=80' },
+  { label: 'Anniversary', image: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=900&q=80' },
+  { label: 'House Party', image: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=900&q=80' },
+  { label: 'Corporate Event', image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=900&q=80' },
+];
 
-const toCurrency = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+const HERO_BANNERS = [
+  {
+    title: 'Find Your Perfect Venue in Bhopal',
+    subtitle: 'Gardens · Farmhouses · Resorts · Banquet Halls · Lawns',
+    description: 'Discover and book the finest event spaces across the city with confidence.',
+    cta: 'Explore Venues',
+    image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1400&q=80',
+  },
+  {
+    title: 'Top Caterers Starting ₹500/plate',
+    subtitle: 'Premium setups, live counters and pure veg options',
+    description: 'Browse catering specialists, compare menus, and match them to your venue style.',
+    cta: 'View Catering',
+    image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=1400&q=80',
+  },
+  {
+    title: 'Birthday Party Packages',
+    subtitle: 'Decor, photography and venue bundles for easy booking',
+    description: 'Discover pre-built celebration combos that save time and reduce planning stress.',
+    cta: 'View Packages',
+    image: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=1400&q=80',
+  },
+];
 
-const CAT_EMOJI = {
-  Gardens: '🌿', Farmhouses: '🏡', Resorts: '🏨',
-  'Banquet Halls': '🎪', Lawns: '🌾',
+const INSPIRATION_FALLBACKS = [
+  'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=900&q=80',
+];
+
+const VIEWED_KEY = 'venue-ai-recently-viewed';
+const TODAY = new Date().toISOString().slice(0, 10);
+
+// Mobile: show 4 cards initially, then load 4 more
+const INITIAL_VISIBLE = 4;
+const LOAD_MORE_COUNT = 4;
+
+const toRupee = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+
+const LazyImage = ({ src, alt, className, ...props }) => {
+  const imgRef = useRef(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsInView(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { rootMargin: '200px' }
+    );
+
+    if (imgRef.current) observer.observe(imgRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={imgRef} className={`relative overflow-hidden bg-gray-100 ${className}`} {...props}>
+      {isInView && (
+        <img
+          src={src}
+          alt={alt}
+          className={`h-full w-full object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+          onLoad={() => setIsLoaded(true)}
+          loading="lazy"
+        />
+      )}
+      {!isLoaded && isInView && <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />}
+    </div>
+  );
 };
 
-const CAT_BG = {
-  Gardens: '#1e2a2a', Farmhouses: '#2a1f1a', Resorts: '#1a2330',
-  'Banquet Halls': '#252040', Lawns: '#1f2a1f',
+const SectionHeader = ({ title, actionLabel = 'View all', actionTo = '/services' }) => (
+  <div className="mb-5 flex items-center justify-between gap-3">
+    <h2 className="text-lg font-bold tracking-tight text-[#23113F] sm:text-xl md:text-2xl">{title}</h2>
+    <Link to={actionTo} className="whitespace-nowrap text-sm font-semibold text-[#7C3AED] transition hover:underline">
+      {actionLabel}
+    </Link>
+  </div>
+);
+
+// Section with "Load More" functionality for mobile optimization
+const SectionWithLoadMore = ({ title, items, selectedDate, onOpen, emptyMessage, viewAllLink }) => {
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  
+  // Reset visible count when items change
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE);
+  }, [items.length]);
+  
+  const visibleItems = items.slice(0, visibleCount);
+  const hasMore = visibleCount < items.length;
+  
+  const handleLoadMore = () => {
+    setVisibleCount(prev => Math.min(prev + LOAD_MORE_COUNT, items.length));
+  };
+  
+  if (items.length === 0 && emptyMessage) {
+    return (
+      <section>
+        <SectionHeader title={title} actionTo={viewAllLink || '/services'} />
+        <div className="rounded-xl bg-white p-6 text-center shadow-md">
+          <p className="text-sm text-[#7D6F95]">{emptyMessage}</p>
+        </div>
+      </section>
+    );
+  }
+  
+  return (
+    <section>
+      <SectionHeader title={title} actionTo={viewAllLink || '/services'} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {visibleItems.map((item) => (
+          <ListingCard key={item.id} venue={item} selectedDate={selectedDate} onOpen={onOpen} />
+        ))}
+      </div>
+      {hasMore && (
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={handleLoadMore}
+            className="rounded-full bg-[#7C3AED] px-6 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#6D28D9] active:scale-95"
+          >
+            Load More ({items.length - visibleCount} left)
+          </button>
+        </div>
+      )}
+    </section>
+  );
+};
+
+const ListingCard = ({ venue, selectedDate, onOpen }) => {
+  const availableLabel = selectedDate
+    ? 'Check exact availability'
+    : venue.available_today ? 'Available Today' : 'Check Availability';
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(venue)}
+      className="group w-full min-w-0 overflow-hidden rounded-2xl bg-white text-left shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+    >
+      <div className="relative h-40 w-full overflow-hidden sm:h-44">
+        <LazyImage src={getVenueImage(venue)} alt={venue.title} className="h-full w-full" />
+        <div className="absolute left-3 top-3 rounded-full bg-[#22C55E] px-2 py-1 text-[11px] font-bold text-white shadow-sm">
+          {venue.rating?.toFixed?.(1) || venue.rating || '4.5'}
+        </div>
+        <div className="absolute right-3 top-3 rounded-full bg-white/90 p-1.5 text-[#8A7AAE] backdrop-blur-sm transition hover:bg-white">
+          <Heart className="h-4 w-4" />
+        </div>
+      </div>
+
+      <div className="space-y-2 p-3 sm:p-4">
+        <div>
+          <h3 className="line-clamp-1 text-sm font-bold text-[#22103D] sm:text-base">{venue.title}</h3>
+          <p className="mt-1 text-xs text-[#7D6F95]">⭐ {Number(venue.rating || 0).toFixed(1)} | {venue.review_count || 0}+ reviews</p>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 text-xs text-[#7D6F95]">
+          <span className="font-bold text-[#2A174A]">{toRupee(venue.price)}</span>
+          <span className="text-right text-[10px] sm:text-xs">{venue.price_unit || 'Starting Price'}</span>
+        </div>
+
+        <div className="flex items-center gap-1 text-xs text-[#7D6F95]">
+          <MapPin className="h-3 w-3 flex-shrink-0 sm:h-3.5 sm:w-3.5" />
+          <span className="line-clamp-1 text-[11px] sm:text-xs">{getVenueLocationLabel(venue) || 'Bhopal'}</span>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5 sm:gap-2">
+          {venue.tag_label && (
+            <span className="rounded-full bg-[#F3E8FF] px-1.5 py-0.5 text-[9px] font-semibold text-[#7C3AED] sm:px-2 sm:py-1 sm:text-[10px]">
+              {venue.tag_label}
+            </span>
+          )}
+          {venue.pure_veg && (
+            <span className="rounded-full bg-[#DCFCE7] px-1.5 py-0.5 text-[9px] font-semibold text-[#166534] sm:px-2 sm:py-1 sm:text-[10px]">
+              Pure Veg
+            </span>
+          )}
+        </div>
+
+        <div className="rounded-xl bg-[#EDE9FE] px-2 py-1.5 text-center text-[10px] font-semibold text-[#6D28D9] transition sm:px-2.5 sm:py-2 sm:text-xs">
+          {availableLabel}
+        </div>
+      </div>
+    </button>
+  );
 };
 
 export default function Home() {
   const navigate = useNavigate();
-  const [venues, setVenues] = useState([]);
-  const [availability, setAvailability] = useState({});
+  const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedVenueId, setSelectedVenueId] = useState(null);
-
-  const [category, setCategory] = useState('All');
-  const [guestCount, setGuestCount] = useState(250);
   const [selectedDate, setSelectedDate] = useState('');
-  const [minPrice, setMinPrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(250000);
+  const [selectedOccasion, setSelectedOccasion] = useState('Wedding');
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [recentlyViewed, setRecentlyViewed] = useState([]);
 
   useEffect(() => {
-    (async () => {
+    const interval = setInterval(() => {
+      setHeroIndex((current) => (current + 1) % HERO_BANNERS.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(VIEWED_KEY) || '[]');
+      setRecentlyViewed(Array.isArray(stored) ? stored : []);
+    } catch {
+      setRecentlyViewed([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadListings = async () => {
       try {
-        const response = await productAPI.getAll({ status: 'approved' });
-        const approved = Array.isArray(response) ? response : [];
-        setVenues(approved);
-        const avail = await Promise.all(
-          approved.map(async (v) => {
-            try {
-              const r = await bookingAPI.getAvailability(v.id);
-              return [v.id, r.blockedSlots || []];
-            } catch { return [v.id, []]; }
-          })
-        );
-        setAvailability(Object.fromEntries(avail));
-      } catch (e) {
-        console.error(e);
+        const venues = await productAPI.getAll({ status: 'approved', city: 'Bhopal', limit: 50 });
+        setListings(Array.isArray(venues) ? venues : []);
+      } catch (error) {
+        console.error('Failed to load listings:', error);
       } finally {
         setLoading(false);
       }
-    })();
+    };
+
+    loadListings();
   }, []);
 
-  const filteredVenues = useMemo(() => {
-    return venues.filter((v) => {
-      const price = Number(v.price || 0);
-      const cap = Number(v.capacity || 0);
-      if (category !== 'All' && v.category !== category) return false;
-      if (cap && cap < guestCount) return false;
-      if (price < minPrice || price > maxPrice) return false;
-      if (!matchesVenueSearch(v, searchQuery)) return false;
-      if (selectedDate) {
-        const blocked = (availability[v.id] || []).filter(
-          (s) => s.event_date?.slice(0, 10) === selectedDate
-        );
-        if (blocked.length >= TIME_SLOTS.length) return false;
+  const filteredListings = useMemo(() => {
+    return listings.filter((listing) => {
+      if (selectedOccasion && !(listing.occasion_focus || listing.occasion_types || []).includes(selectedOccasion)) {
+        return false;
       }
       return true;
     });
-  }, [venues, category, guestCount, minPrice, maxPrice, selectedDate, availability, searchQuery]);
+  }, [listings, selectedOccasion]);
 
-  const resetFilters = () => {
-    setCategory('All'); setGuestCount(250); setSelectedDate('');
-    setMinPrice(0); setMaxPrice(250000); setSearchQuery('');
-  };
+  const recommended = useMemo(() => [...filteredListings].sort((a, b) => (b.recommended_score || 0) - (a.recommended_score || 0)), [filteredListings]);
+  const budgetFriendly = useMemo(() => filteredListings.filter((listing) => Number(listing.price || 0) <= 100000), [filteredListings]);
+  const premiumPicks = useMemo(() => filteredListings.filter((listing) => listing.premium_pick || listing.budget_tier === 'premium'), [filteredListings]);
+  const trending = useMemo(() => [...filteredListings].sort((a, b) => (b.trending_score || 0) - (a.trending_score || 0)), [filteredListings]);
+  const comboPackages = useMemo(() => filteredListings.filter((listing) => listing.combo_package).slice(0, 6), [filteredListings]);
 
-  const heroStats = useMemo(() => {
-    const categories = new Set(venues.map((venue) => venue.category).filter(Boolean));
-    const locations = new Set(
-      venues
-        .map((venue) => getVenueLocationLabel(venue))
-        .filter(Boolean)
+  const inspirationImages = useMemo(() => {
+    const listingImages = filteredListings
+      .flatMap((listing) => [listing.image, ...(listing.gallery_images || [])])
+      .filter(Boolean)
+      .slice(0, 6)
+      .map((image) => toVenueImageUrl(image));
+
+    return [...listingImages, ...INSPIRATION_FALLBACKS].slice(0, 6);
+  }, [filteredListings]);
+
+  const viewedListings = useMemo(() => {
+    const viewedMap = new Map(listings.map((listing) => [listing.id, listing]));
+    return recentlyViewed.map((item) => viewedMap.get(item.id) || item).filter(Boolean);
+  }, [listings, recentlyViewed]);
+
+  const handleOpenListing = useCallback((listing) => {
+    navigate(`/venues/${listing.id}`);
+  }, [navigate]);
+
+  const currentBanner = HERO_BANNERS[heroIndex];
+
+  // Show loading skeleton
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F8F5FF] pb-28">
+        <div className="px-4 py-5 md:px-6 lg:px-8">
+          <div className="rounded-3xl bg-[#FBFAFF] p-4 shadow-lg sm:p-5 md:p-8">
+            <div className="mb-8 h-[340px] animate-pulse rounded-2xl bg-gray-200 sm:h-[380px] md:h-[420px]" />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="h-80 animate-pulse rounded-2xl bg-gray-200" />
+              ))}
+            </div>
+          </div>
+        </div>
+        <MarketplaceBottomNav />
+      </div>
     );
-    const averagePrice = venues.length
-      ? Math.round(venues.reduce((sum, venue) => sum + Number(venue.price || 0), 0) / venues.length)
-      : 0;
-
-    return [
-      { num: `${venues.length}+`, label: 'Approved Venues', icon: '🏛️' },
-      { num: String(categories.size || 0), label: 'Categories', icon: '🎯' },
-      { num: `${locations.size}+`, label: 'Areas Covered', icon: '📍' },
-      { num: averagePrice ? toCurrency(averagePrice) : '₹0', label: 'Average Starting Price', icon: '💸' },
-    ];
-  }, [venues]);
-
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    const trimmedQuery = searchQuery.trim();
-    navigate(trimmedQuery ? `/services?q=${encodeURIComponent(trimmedQuery)}` : '/services');
-  };
-
-  const getAvailableSlotCount = (venueId, date) => {
-    if (!date) return TIME_SLOTS.length;
-    const blocked = (availability[venueId] || []).filter(
-      (slot) => slot.event_date?.slice(0, 10) === date
-    );
-    return Math.max(TIME_SLOTS.length - blocked.length, 0);
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Hero Section with Dark Theme */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-purple-900/40 via-black to-pink-900/40 pt-20 pb-32 px-4">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=2070')] bg-cover bg-center opacity-10"></div>
-        <div className="relative z-10 max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-full px-4 py-2 mb-6 border border-white/20">
-            <Sparkles className="w-4 h-4 text-purple-400" />
-            <span className="text-sm font-medium">Bhopal's #1 Venue Discovery Platform</span>
-          </div>
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
-            Find Your <span className="text-purple-400">Perfect</span>
-            <br />Venue in Bhopal
-          </h1>
-          <p className="text-lg text-gray-300 mb-10 max-w-2xl mx-auto">
-            Gardens · Farmhouses · Resorts · Banquet Halls · Lawns
-            <br />Discover and book the finest event spaces across the city with confidence.
-          </p>
-
-          {/* Search Bar with Light Button */}
-          <form className="max-w-3xl mx-auto" onSubmit={handleSearchSubmit}>
-            <div className="flex flex-col md:flex-row gap-3 bg-black/60 backdrop-blur-xl rounded-2xl p-2 border border-white/20">
-              <div className="flex-1 flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3">
-                <Search className="w-5 h-5 text-purple-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search venues by name, location, or category..."
-                  className="flex-1 bg-transparent outline-none text-white placeholder:text-gray-400"
-                />
-              </div>
-              <button type="submit" className="bg-white text-black px-8 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all flex items-center justify-center gap-2">
-                <Search className="w-4 h-4" />
-                Search
-              </button>
-            </div>
-          </form>
-
-          {/* Stats */}
-          <div className="flex flex-wrap justify-center gap-8 md:gap-12 mt-16">
-            {heroStats.map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="text-3xl font-bold text-white">{stat.num}</div>
-                <div className="text-sm text-gray-400 flex items-center gap-1">
-                  <span>{stat.icon}</span>
-                  <span>{stat.label}</span>
+    <div className="min-h-screen bg-[#F8F5FF] pb-28">
+      <div className="">
+        <div className="rounded-3xl bg-[#FBFAFF] p-4 shadow-lg sm:p-5 md:p-8">
+          {/* Hero Banner */}
+          <div className="relative mb-8 overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="relative h-[340px] sm:h-[380px] md:h-[420px] lg:h-[460px]">
+              <LazyImage src={currentBanner.image} alt={currentBanner.title} className="absolute inset-0 h-full w-full" />
+              <div className="absolute inset-0 z-10 bg-gradient-to-r from-black/85 via-black/55 to-black/20" />
+              <div className="absolute inset-0 z-20 flex items-center p-4 sm:p-6 md:p-10">
+                <div className="max-w-2xl">
+                  <div className="rounded-[28px] bg-[#1F1140]/55 p-4 text-white shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-md sm:p-5 md:p-7">
+                    <h1 className="text-2xl font-extrabold leading-tight text-white sm:text-3xl md:text-5xl">
+                      {currentBanner.title}
+                    </h1>
+                    <p className="mt-3 text-xs font-medium text-white/90 sm:text-sm md:text-base">
+                      {currentBanner.subtitle}
+                    </p>
+                    <p className="mt-3 max-w-xl text-sm text-white/95 md:text-lg">
+                      {currentBanner.description}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/services')}
+                    className="mt-5 w-fit rounded-full bg-white px-5 py-3 text-sm font-bold text-[#34135E] shadow-lg transition hover:bg-gray-100 md:mt-6 md:px-6"
+                  >
+                    {currentBanner.cta || 'Explore Venues'}
+                  </button>
                 </div>
               </div>
+            </div>
+            <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center gap-2">
+              {HERO_BANNERS.map((banner, index) => (
+                <button
+                  key={banner.title}
+                  type="button"
+                  onClick={() => setHeroIndex(index)}
+                  className={`h-2 rounded-full transition-all ${heroIndex === index ? 'w-6 bg-[#7C3AED]' : 'w-2 bg-white/70'}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Filters Row */}
+          <div className="mb-8 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl bg-gradient-to-r from-[#F5EDFF] to-[#FFF6E9] p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-[#A78BFA]">Smart Suggestions</p>
+              <p className="mt-1 text-sm font-semibold text-[#2A174A]">
+                Based on your search: <span className="text-[#7C3AED]">{selectedOccasion} in Bhopal</span>
+              </p>
+            </div>
+            <div className="rounded-xl bg-white p-4 shadow-md">
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-[#A293BB]">Available Today / On Your Date</label>
+              <input
+                type="date"
+                min={TODAY}
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(event.target.value)}
+                className="w-full rounded-lg border border-[#E9DDFE] px-4 py-2.5 text-sm font-semibold text-[#2A174A] outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]"
+              />
+            </div>
+          </div>
+
+          {/* Quick Categories */}
+          <div className="mb-8 grid grid-cols-4 gap-3 sm:grid-cols-4 md:grid-cols-8">
+            {QUICK_CATEGORIES.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => navigate(`/services?q=${encodeURIComponent(item.label)}`)}
+                className="flex min-w-0 flex-col items-center gap-2 transition hover:scale-105"
+              >
+                <div className={`h-14 w-14 overflow-hidden rounded-2xl bg-gradient-to-br ${item.tone} p-[2px] shadow-md sm:h-16 sm:w-16`}>
+                  <div className="h-full w-full overflow-hidden rounded-xl bg-white">
+                    <LazyImage src={item.image} alt={item.label} className="h-full w-full" />
+                  </div>
+                </div>
+                <span className="text-center text-[11px] font-semibold text-[#6F6289] sm:text-xs">{item.label}</span>
+              </button>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* Filters Section - Dark Theme */}
-      
+          <div className="space-y-10">
+            {/* Recommended Section with Load More */}
+            <SectionWithLoadMore
+              title="Recommended For You"
+              items={recommended}
+              selectedDate={selectedDate}
+              onOpen={handleOpenListing}
+              emptyMessage="No recommended venues at the moment."
+            />
 
-      {/* Results Section with Light Buttons */}
-      <section className="px-4 pb-16 max-w-7xl mx-auto">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
-            <div className="bg-white/10 p-2 rounded-xl">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <h2 className="text-xl font-bold">Available Venues</h2>
-          </div>
-          <button
-            onClick={() => navigate('/services')}
-            className="bg-white text-black px-4 py-2 rounded-xl font-semibold hover:bg-gray-100 transition-all flex items-center gap-2"
-          >
-            <span>View All Services</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="text-center py-16 bg-[#0F0F12] rounded-2xl border border-white/10">
-            <div className="flex flex-col items-center gap-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent"></div>
-              <p className="text-gray-400">Discovering perfect venues for you...</p>
-            </div>
-          </div>
-        ) : filteredVenues.length === 0 ? (
-          <div className="text-center py-16 bg-[#0F0F12] rounded-2xl border border-white/10">
-            <div className="flex flex-col items-center gap-4">
-              <div className="bg-white/5 p-4 rounded-full">
-                <Search className="w-6 h-6 text-gray-400" />
+            {/* Plan by Occasion */}
+            <section>
+              <SectionHeader title="Plan by Occasion" />
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-5">
+                {OCCASIONS.map((occasion) => (
+                  <button
+                    key={occasion.label}
+                    type="button"
+                    onClick={() => setSelectedOccasion(occasion.label)}
+                    className={`relative h-24 min-w-0 overflow-hidden rounded-xl text-left shadow-md transition hover:scale-[1.02] sm:h-28 ${selectedOccasion === occasion.label ? 'ring-2 ring-[#7C3AED]' : ''}`}
+                  >
+                    <LazyImage src={occasion.image} alt={occasion.label} className="absolute inset-0 h-full w-full" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-black/10" />
+                    <span className="absolute bottom-2 left-2 pr-3 text-xs font-bold text-white sm:bottom-3 sm:left-3 sm:text-sm">{occasion.label}</span>
+                  </button>
+                ))}
               </div>
-              <p className="text-gray-400">No venues match your filters</p>
-              <button
-                onClick={resetFilters}
-                className="text-sm text-gray-400 hover:text-white font-medium underline"
-              >
-                Clear all filters
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredVenues.map((venue) => (
-              <article
-                key={venue.id}
-                onClick={() => setSelectedVenueId(venue.id)}
-                className={`group bg-[#0F0F12] rounded-[28px] border overflow-hidden transition-all cursor-pointer hover:-translate-y-1 hover:shadow-2xl ${selectedVenueId === venue.id
-                    ? 'border-white shadow-lg'
-                    : 'border-white/10 hover:border-white/40'
-                  }`}
-              >
-                <div
-                  className="relative h-56 overflow-hidden"
-                  style={{ background: CAT_BG[venue.category] || '#1a1a1f' }}
-                >
-                  {getVenueImage(venue) ? (
-                    <img
-                      src={getVenueImage(venue)}
-                      alt={venue.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-6xl bg-white/5">
-                      {CAT_EMOJI[venue.category] || '🏛️'}
-                    </div>
-                  )}
+            </section>
 
-                  <div className="absolute inset-x-0 top-0 p-4 flex items-start justify-between gap-3">
-                    <span className="text-xs px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-white border border-white/10">
-                      {CAT_EMOJI[venue.category]} {venue.category}
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-2 rounded-full bg-black/45 backdrop-blur-md hover:bg-black/70 transition-colors"
-                      >
-                        <Heart className="w-4 h-4 text-white/80 hover:text-red-400" />
-                      </button>
-                      <button
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-2 rounded-full bg-black/45 backdrop-blur-md hover:bg-black/70 transition-colors"
-                      >
-                        <Share2 className="w-4 h-4 text-white/80 hover:text-blue-400" />
-                      </button>
-                    </div>
-                  </div>
+            {/* Budget Picks with Load More */}
+            <SectionWithLoadMore
+              title="Budget-Based Picks"
+              items={budgetFriendly}
+              selectedDate={selectedDate}
+              onOpen={handleOpenListing}
+              emptyMessage="No budget-friendly venues found under ₹1L."
+              viewAllLink="/services?budget=under-1l"
+            />
 
-                  <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
-                    <div className="flex items-end justify-between gap-3">
-                      <div>
-                        <h3 className="text-xl font-bold text-white">{venue.name}</h3>
-                        <div className="flex items-center gap-2 text-sm text-gray-200 mt-1">
-                          <MapPin className="w-4 h-4" />
-                          <span className="truncate">{getVenueLocationLabel(venue) || 'Location coming soon'}</span>
+            {/* Premium Picks with Load More */}
+            <SectionWithLoadMore
+              title="Premium Picks"
+              items={premiumPicks}
+              selectedDate={selectedDate}
+              onOpen={handleOpenListing}
+              emptyMessage="No premium venues found."
+              viewAllLink="/services?category=premium"
+            />
+
+            {/* Trending with Load More */}
+            <SectionWithLoadMore
+              title="Trending Near You"
+              items={trending}
+              selectedDate={selectedDate}
+              onOpen={handleOpenListing}
+              emptyMessage="No trending venues at the moment."
+            />
+
+            {/* Combo Packages Section */}
+            {comboPackages.length > 0 && (
+              <section>
+                <SectionHeader title="Top Deals & Combo Packages" />
+                <div className="grid gap-5 md:grid-cols-2">
+                  {comboPackages.map((combo) => (
+                    <button
+                      key={combo.id}
+                      type="button"
+                      onClick={() => handleOpenListing(combo)}
+                      className="group overflow-hidden rounded-xl bg-white text-left shadow-md transition hover:shadow-xl"
+                    >
+                      <div className="flex flex-col md:flex-row">
+                        <div className="flex-1 p-4 sm:p-5">
+                          <p className="text-base font-bold text-[#2A174A] sm:text-lg">{combo.combo_name || 'Special Combo'}</p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {(combo.combo_items || []).slice(0, 3).map((item) => (
+                              <span key={item} className="rounded-full bg-[#F3E8FF] px-2 py-0.5 text-[10px] font-semibold text-[#7C3AED] sm:px-2.5 sm:py-1 sm:text-xs">
+                                {item}
+                              </span>
+                            ))}
+                            {(combo.combo_items || []).length > 3 && (
+                              <span className="rounded-full bg-[#F3E8FF] px-2 py-0.5 text-[10px] font-semibold text-[#7C3AED]">
+                                +{combo.combo_items.length - 3}
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-4 flex flex-wrap items-end gap-2">
+                            <span className="text-xl font-extrabold text-[#D97706] sm:text-2xl">{toRupee(combo.combo_discount_price || combo.price)}</span>
+                            {!!combo.combo_original_price && (
+                              <span className="text-xs font-semibold text-[#A293BB] line-through sm:text-sm">{toRupee(combo.combo_original_price)}</span>
+                            )}
+                          </div>
+                          <div className="mt-4 inline-flex items-center gap-1 rounded-full bg-[#E9D5FF] px-3 py-1.5 text-xs font-bold text-[#6D28D9] transition group-hover:bg-[#DDD6FE] sm:mt-5 sm:px-4 sm:py-2 sm:text-sm">
+                            View Package <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </div>
+                        </div>
+                        <div className="h-36 w-full md:h-auto md:w-2/5">
+                          <LazyImage src={getVenueImage(combo)} alt={combo.title} className="h-full w-full" />
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-xl font-bold text-white">{toCurrency(venue.price)}</div>
-                        <div className="text-xs text-gray-300">per event</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-5">
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="rounded-2xl bg-white/[0.04] border border-white/10 px-4 py-3">
-                      <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-[0.18em] mb-2">
-                        <Users className="w-4 h-4" />
-                        Capacity
-                      </div>
-                      <div className="font-semibold text-white">Up to {venue.capacity || 0}</div>
-                    </div>
-                    <div className="rounded-2xl bg-white/[0.04] border border-white/10 px-4 py-3">
-                      <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-[0.18em] mb-2">
-                        <Clock className="w-4 h-4" />
-                        Availability
-                      </div>
-                      <div className="font-semibold text-white">
-                        {selectedDate ? `${getAvailableSlotCount(venue.id, selectedDate)} slots open` : 'Check date'}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 mb-5">
-                    <span className="text-xs px-3 py-1 rounded-full bg-white/10 text-gray-300 border border-white/20">
-                      {Number(venue.capacity) >= 500 ? 'Large Event' : Number(venue.capacity) >= 300 ? 'Medium Gathering' : 'Intimate Setting'}
-                    </span>
-                    {(venue.business_name || venue.vendor_name) && (
-                      <span className="text-xs px-3 py-1 rounded-full bg-white/10 text-gray-300 border border-white/20">
-                        {venue.business_name || venue.vendor_name}
-                      </span>
-                    )}
-                    {!!venue.gallery_images?.length && (
-                      <span className="text-xs px-3 py-1 rounded-full bg-white/10 text-gray-300 border border-white/20">
-                        {venue.gallery_images.length} photos
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); navigate(`/venues/${venue.id}`); }}
-                      className="flex-1 text-sm px-4 py-3 rounded-2xl border border-white/20 hover:bg-white/5 transition-all font-medium"
-                    >
-                      View Details
-                      <ChevronRight className="w-4 h-4 inline ml-1" />
                     </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); navigate(`/venues/${venue.id}`, { state: { startBooking: true } }); }}
-                      className="flex-1 text-sm px-4 py-3 rounded-2xl bg-white text-black hover:bg-gray-100 transition-all font-semibold flex items-center justify-center gap-1"
-                    >
-                      Book Now
-                      <Navigation className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {selectedVenueId === venue.id && (
-                    <div className="mt-4 rounded-2xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-300">
-                      {selectedDate
-                        ? `${getAvailableSlotCount(venue.id, selectedDate)} of ${TIME_SLOTS.length} booking slots are still open on ${selectedDate}.`
-                        : 'Pick a date in filters to see live slot availability for this venue.'}
-                    </div>
-                  )}
+                  ))}
                 </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+              </section>
+            )}
 
-      {/* Testimonials Section with Light Simple Buttons */}
-      <section className="px-4 py-16 bg-gradient-to-br from-purple-900/20 via-black to-pink-900/20">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="bg-white/10 p-3 rounded-xl inline-block mb-4">
-              <Star className="w-6 h-6 text-white" />
-            </div>
-            <h2 className="text-3xl font-bold mb-4">What Our Customers Say</h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">Real stories from real people who found their perfect venue with us</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                name: "Priya Sharma",
-                event: "Wedding Reception",
-                venue: "Royal Garden Resort",
-                rating: 5,
-                comment: "Amazing experience! The venue was perfect for our wedding. The booking process was smooth and the staff was very helpful. Highly recommend!",
-                avatar: "👩‍💼"
-              },
-              {
-                name: "Rahul Verma",
-                event: "Corporate Event",
-                venue: "Grand Banquet Hall",
-                rating: 5,
-                comment: "Found the perfect venue for our company annual meet. The platform made it so easy to compare options and book. Excellent service!",
-                avatar: "👨‍💼"
-              },
-              {
-                name: "Anjali Patel",
-                event: "Birthday Party",
-                venue: "Sunshine Farmhouse",
-                rating: 4,
-                comment: "Beautiful farmhouse with amazing ambiance. The booking process was seamless and the venue exceeded our expectations. Will definitely book again!",
-                avatar: "👩‍🎓"
-              }
-            ].map((testimonial, index) => (
-              <div key={index} className="bg-[#0F0F12] rounded-2xl p-6 border border-white/10 hover:shadow-xl transition-all">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="text-4xl">{testimonial.avatar}</div>
-                  <div className="flex-1">
-                    <h4 className="font-bold">{testimonial.name}</h4>
-                    <p className="text-sm text-gray-400">{testimonial.event}</p>
-                  </div>
-                  <div className="flex">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
-                </div>
-                <div className="relative">
-                  <Quote className="w-5 h-5 text-white/20 absolute -top-2 -left-2" />
-                  <p className="text-gray-300 italic pl-6">{testimonial.comment}</p>
-                </div>
-                <div className="mt-4 pt-4 border-t border-white/10">
-                  <p className="text-sm text-gray-400 font-semibold">📍 {testimonial.venue}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Contact Section with Light Buttons */}
-      <section className="px-4 py-16 max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <div className="bg-white/10 p-3 rounded-xl inline-block mb-4">
-            <MessageSquare className="w-6 h-6 text-white" />
-          </div>
-          <h2 className="text-3xl font-bold mb-4">Get in Touch</h2>
-          <p className="text-gray-400 max-w-2xl mx-auto">Have questions? We're here to help you find the perfect venue for your special event</p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
-          <div className="text-center group">
-            <div className="bg-white/10 p-4 rounded-2xl inline-block mb-4 group-hover:scale-110 transition-all">
-              <Phone className="w-7 h-7 text-white" />
-            </div>
-            <h3 className="font-bold mb-2">Call Us</h3>
-            <p className="text-gray-400 mb-1">Mon-Sat: 9AM-8PM</p>
-            <a href="tel:+919876543210" className="text-gray-400 font-semibold hover:text-white">+91 98765 43210</a>
-          </div>
-
-          <div className="text-center group">
-            <div className="bg-white/10 p-4 rounded-2xl inline-block mb-4 group-hover:scale-110 transition-all">
-              <Mail className="w-7 h-7 text-white" />
-            </div>
-            <h3 className="font-bold mb-2">Email Us</h3>
-            <p className="text-gray-400 mb-1">24/7 Support</p>
-            <a href="mailto:info@venueai.com" className="text-gray-400 font-semibold hover:text-white">info@venueai.com</a>
-          </div>
-
-          <div className="text-center group">
-            <div className="bg-white/10 p-4 rounded-2xl inline-block mb-4 group-hover:scale-110 transition-all">
-              <MapPin className="w-7 h-7 text-white" />
-            </div>
-            <h3 className="font-bold mb-2">Visit Us</h3>
-            <p className="text-gray-400 mb-1">MP Nagar, Zone-I</p>
-            <span className="text-gray-400 font-semibold">Bhopal, Madhya Pradesh</span>
-          </div>
-        </div>
-
-        <div className="bg-[#0F0F12] rounded-3xl p-8 border border-white/10">
-          <div className="max-w-2xl mx-auto">
-            <h3 className="text-2xl font-bold mb-6 text-center">Send us a Message</h3>
-            <form className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="Your Name"
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 focus:border-white outline-none text-white placeholder:text-gray-500"
-                />
-                <input
-                  type="email"
-                  placeholder="Your Email"
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 focus:border-white outline-none text-white placeholder:text-gray-500"
-                />
-              </div>
-              <input
-                type="tel"
-                placeholder="Your Phone Number"
-                className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 focus:border-white outline-none text-white placeholder:text-gray-500"
+            {/* Recently Viewed with Load More */}
+            {viewedListings.length > 0 && (
+              <SectionWithLoadMore
+                title="Recently Viewed"
+                items={viewedListings}
+                selectedDate={selectedDate}
+                onOpen={handleOpenListing}
+                emptyMessage="No recently viewed venues."
               />
-              <textarea
-                placeholder="Tell us about your event..."
-                rows={4}
-                className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 focus:border-white outline-none text-white placeholder:text-gray-500 resize-none"
-              />
-              <button
-                type="submit"
-                className="w-full bg-white text-black py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all"
-              >
-                Send Message
-              </button>
-            </form>
+            )}
+
+            {/* Inspiration Section */}
+            <section>
+              <SectionHeader title="Real Event Inspiration" />
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                {inspirationImages.map((image, index) => (
+                  <div key={`${image}-${index}`} className="overflow-hidden rounded-xl">
+                    <LazyImage src={image} alt={`Inspiration ${index + 1}`} className="h-full min-h-[140px] w-full object-cover md:min-h-[200px]" />
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {filteredListings.length === 0 && (
+              <div className="mt-8 rounded-xl bg-white p-8 text-center shadow-md">
+                <ShieldCheck className="mx-auto h-10 w-10 text-[#7C3AED]" />
+                <p className="mt-3 text-base font-semibold text-[#2A174A]">No listings match the selected filters right now.</p>
+              </div>
+            )}
           </div>
         </div>
-      </section>
+      </div>
+
+      <MarketplaceBottomNav />
     </div>
   );
 }

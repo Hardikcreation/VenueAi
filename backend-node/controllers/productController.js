@@ -24,13 +24,42 @@ const formatProductPayload = (product, extras = {}) => {
     business_name: vendor?.business_name || '',
     vendor_name: owner?.name || '',
     area: [product.zone, product.landmark].filter(Boolean).join(', '),
+    city: product.city || 'Bhopal',
+    listing_type: product.listing_type || 'venue',
+    price_unit: product.price_unit || 'Starting Price',
+    tag_label: product.tag_label || '',
+    pure_veg: Boolean(product.pure_veg),
+    rating: Number(product.rating || 0),
+    review_count: Number(product.review_count || 0),
+    budget_tier: product.budget_tier || 'mid',
+    premium_pick: Boolean(product.premium_pick),
+    available_today: Boolean(product.available_today),
+    combo_package: Boolean(product.combo_package),
+    combo_name: product.combo_name || '',
+    combo_items: product.combo_items || [],
+    combo_discount_price: Number(product.combo_discount_price || 0),
+    combo_original_price: Number(product.combo_original_price || 0),
+    trending_score: Number(product.trending_score || 0),
+    recommended_score: Number(product.recommended_score || 0),
+    occasion_focus: product.occasion_focus || product.occasion_types || [],
+    service_area: product.service_area || product.location || '',
   };
 };
 
 // ✅ Get All Products (with search + filter + pagination)
 const getAllProducts = async (req, res) => {
   try {
-    const { status, search, page = 1, limit = 10 } = req.query;
+    const {
+      status,
+      search,
+      category,
+      listing_type,
+      city,
+      occasion,
+      budget_tier,
+      page = 1,
+      limit = 10
+    } = req.query;
 
     let filter = {};
 
@@ -42,6 +71,12 @@ const getAllProducts = async (req, res) => {
     if (search) {
       filter.$text = { $search: search };
     }
+
+    if (category) filter.category = category;
+    if (listing_type) filter.listing_type = listing_type;
+    if (city) filter.city = city;
+    if (budget_tier) filter.budget_tier = budget_tier;
+    if (occasion) filter.occasion_focus = { $in: [occasion] };
 
     const skip = (page - 1) * limit;
 
