@@ -220,7 +220,7 @@ const Services = () => {
   return (
     <div className="min-h-screen bg-[#F8F5FF]">
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-[#7C3AED] to-[#6D28D9] overflow-hidden">
+      {/* <div className="relative bg-gradient-to-r from-[#7C3AED] to-[#6D28D9] overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-72 h-72 bg-white rounded-full filter blur-3xl" />
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-300 rounded-full filter blur-3xl" />
@@ -248,7 +248,7 @@ const Services = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       <div className="px-3 sm:px-4 py-6 pb-24">
         <div className="max-w-7xl mx-auto space-y-6">
